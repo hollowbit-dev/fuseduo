@@ -9,7 +9,7 @@ real script (AppleScript, JavaScript for Automation or zsh), checks that it comp
 plain English exactly what it will do. Nothing runs until you approve it. Save the fusions you like
 and run them again in one click.
 
-A [Hollowbit Studio](https://hollowbit.dev) project. Status: early preview, Mac only.
+A [Hollowbit Studio](https://hollowbit.dev) project · [hollowbit.dev/fuseduo](https://hollowbit.dev/fuseduo/). Status: early preview, Mac only.
 
 ## How it works
 
@@ -27,6 +27,12 @@ button is enabled.
 Fuseduo uses Claude. With no setup it uses the Claude Code CLI if it is installed and signed in,
 so it runs on your existing Claude plan. You can also add an Anthropic API key in Settings; it is
 stored encrypted with the macOS keychain.
+
+## Speed
+
+Settings › Speed picks the model: **Best** (Claude Opus 5.5, the default) or **Fast** (Claude Sonnet 5.5,
+about 3× quicker in testing). The one repair pass after a failed compile always uses Opus. Ideas are
+cached per pair for 7 days and start loading while you hover one app over another.
 
 ## Run from source
 
