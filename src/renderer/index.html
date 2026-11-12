@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>Fuseduo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- liquid "goo" filter: blurs shapes together and sharpens the edge back, so blobs melt into one -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="goo"><feGaussianBlur in="SourceGraphic" stdDeviation="10" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9" result="g"/><feComposite in="SourceGraphic" in2="g" operator="atop"/></filter>
+  <filter id="goo-soft"><feGaussianBlur in="SourceGraphic" stdDeviation="7" result="b"/><feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"/></filter>
+</svg>
+
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="grain" aria-hidden="true"></div>
+
+<div class="shell">
+  <!-- ---------- sidebar ---------- -->
+  <nav class="side" aria-label="Library">
+    <div class="side-drag"></div>
+    <div class="brand"><img class="brand-icon" src="../../assets/icon.png" alt=""><span class="word">Fuseduo</span></div>
+    <label class="search field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><input id="search" type="search" placeholder="Search apps" autocomplete="off" spellcheck="false"><kbd>⌘F</kbd></label>
+    <div class="nav" id="nav">
+      <span class="nav-pill" aria-hidden="true"></span>
+      <button class="nav-item" data-view="favourites"><svg viewBox="0 0 24 24"><path d="m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4l-4.8 2.5.9-5.4L4.2 9.7l5.4-.8z"/></svg><span>Favourites</span><em></em></button>
+      <button class="nav-item" data-view="recent"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 2"/></svg><span>Recent</span><em></em></button>
+      <button class="nav-item" data-view="all"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg><span>All apps</span><em></em></button>
+      <p class="nav-label">Categories</p>
+      <div id="cats"></div>
+    </div>
+    <div class="side-foot">
+      <button class="conn" id="conn" title="Claude connection"><span class="dot"></span><span id="connText">Checking Claude…</span></button>
+      <button id="settingsBtn" class="icon-btn" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg></button>
+    </div>
+  </nav>
+
+  <!-- ---------- main ---------- -->
+  <section class="main">
+    <header class="head">
+      <div>
+        <h1 id="viewTitle">Favourites</h1>
+        <p class="hint" id="hint"><span class="hint-key">Drag</span> one app onto another to fuse them.</p>
+      </div>
+    </header>
+    <main class="board-wrap" id="boardWrap">
+      <div id="board" class="board" aria-label="Apps"></div>
+      <div id="empty" class="empty" hidden></div>
+      <p id="boardStatus" class="board-status"><span class="spinner"></span>Finding your apps…</p>
+    </main>
+    <footer class="shelf">
+      <div class="shelf-head"><h2>Your fusions</h2><span class="count" id="fusionCount"></span></div>
+      <div id="shelf" class="shelf-row"></div>
+    </footer>
+  </section>
+</div>
+
+<!-- the floating icon while dragging, and the fusion effect -->
+<div id="ghost" class="ghost" hidden><span class="ghost-glow"></span><img alt=""></div>
+<canvas id="sparks" class="sparks" aria-hidden="true"></canvas>
+<div id="fx" class="fx" hidden aria-hidden="true">
+  <span class="ring"></span><span class="ring r2"></span>
+  <div class="goo"><span class="blob ba"></span><span class="blob bb"></span></div>
+  <img class="fx-a" alt=""><img class="fx-b" alt=""><span class="flash"></span>
+</div>
+
+<aside id="panel" class="panel" aria-live="polite" hidden>
+  <div class="panel-edge" aria-hidden="true"></div>
+  <button class="panel-x icon-btn" id="panelClose" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+  <div class="panel-head">
+    <div class="pair">
+      <div class="pair-goo"><span class="pg a"></span><span class="pg b"></span></div>
+      <img id="pA" alt=""><img id="pB" alt="">
+      <div class="orb" id="orb"><i></i></div>
+    </div>
+    <p class="eyebrow" id="pPair"></p>
+    <h2 id="pTitle"></h2>
+    <p id="pStage" class="stage"></p>
+    <ol class="stepper" id="stepper" aria-label="Progress">
+      <li data-s="ideas">Ideas</li><li data-s="build">Build</li><li data-s="review">Review</li><li data-s="run">Run</li>
+      <span class="stepper-fill" aria-hidden="true"></span>
+    </ol>
+  </div>
+  <div id="pBody" class="panel-body"></div>
+  <div id="pFoot" class="panel-foot" hidden></div>
+</aside>
+
+<div id="modal" class="modal" hidden>
+  <div class="modal-card">
+    <h2>Settings</h2>
+    <div class="provider" id="provider"></div>
+    <label for="keyInput">Anthropic API key <span class="muted">(optional)</span></label>
+    <input id="keyInput" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+    <p class="muted small">With a key, Fuseduo calls the Claude API directly. It is stored encrypted with your Mac’s keychain and only ever sent to Anthropic. <a href="#" id="getKey">Get a key</a></p>
+    <div class="modal-actions">
+      <button class="btn btn-quiet" id="keyClear">Remove key</button>
+      <span class="grow"></span>
+      <button class="btn btn-quiet" id="modalCancel">Close</button>
+      <button class="btn btn-primary" id="keySave">Save key</button>
+    </div>
+  </div>
+</div>
+
+<!-- first launch -->
+<div id="welcome" class="welcome" hidden>
+  <div class="welcome-card">
+    <div class="demo" aria-hidden="true">
+      <div class="demo-goo"><span class="dg a"></span><span class="dg b"></span></div>
+      <img class="demo-a" alt=""><img class="demo-b" alt="">
+      <span class="demo-cursor"></span>
+      <span class="demo-spark s1"></span><span class="demo-spark s2"></span><span class="demo-spark s3"></span>
+    </div>
+    <h2>Fuse two apps.<br><span class="grad-text">Get an automation.</span></h2>
+    <p class="lede">Drop one app onto another. Claude suggests what they could do together, writes the script, and shows you exactly what it does before anything runs.</p>
+    <ol class="how">
+      <li><b>Drag</b><span>one app onto another</span></li>
+      <li><b>Pick</b><span>an idea, or describe your own</span></li>
+      <li><b>Approve</b><span>after reading the plan</span></li>
+    </ol>
+    <div class="welcome-conn" id="welcomeConn"></div>
+    <button class="btn btn-primary lg" id="welcomeGo">Start fusing</button>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

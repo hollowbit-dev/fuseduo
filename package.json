@@ -1,0 +1,16 @@
+{
+  "name": "fuseduo",
+  "productName": "Fuseduo",
+  "version": "0.2.0",
+  "private": true,
+  "author": "Hollowbit Studio",
+  "description": "Fuseduo: drag one app onto another and Claude builds a real automation.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.8.0",
+    "electron": "33.4.11"
+  }
+}
