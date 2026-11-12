@@ -4,14 +4,18 @@
 const { app, BrowserWindow, ipcMain, safeStorage, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { execFile, execFileSync, spawn } = require('child_process');
+const { execFile, spawn } = require('child_process');
 const Anthropic = require('@anthropic-ai/sdk').default;
 const { listApps } = require('./apps');
 const { ideasPrompt, buildPrompt, fixPrompt, IDEAS_SCHEMA, BUILD_SCHEMA } = require('./prompts');
 const os = require('os');
 const { checkScript } = require('./guard');
 
-const MODEL = 'claude-opus-5-5';
+// Speed setting (Settings > Speed). "best" is the default; "fast" was ~3x quicker in testing
+// (2026-11-13, via Claude Code: ideas 8.0s -> 4.3s, builds 23.8s -> 8.5s, all builds compiled).
+const MODELS = { best: 'claude-opus-5-5', fast: 'claude-sonnet-5-5' };
+const FIX_MODEL = 'claude-opus-5-5'; // the one repair pass always uses the strongest model
+const modelFor = () => MODELS[readJson('config.json', {}).speed] || MODELS.best;
 // FUSE_MOCK=1 (tests only): canned answers instead of calling Claude.
 const MOCK = process.env.FUSE_MOCK === '1' ? require('./mock') : null;
 const store = (name) => path.join(app.getPath('userData'), name);
@@ -39,22 +43,30 @@ function client() {
 }
 
 // ---------- Claude Code: uses the person's own subscription when there is no API key ----------
-let CLAUDE_BIN;
+// Finding claude needs a login shell (apps opened from Finder don't get the shell's PATH).
+// That takes a second or two, so it runs once, async, and the path is remembered in config.json.
+let CLAUDE_BIN; // undefined = not looked up yet, null = not installed
+let findingBin = null;
 function claudeBin() {
-  if (CLAUDE_BIN !== undefined) return CLAUDE_BIN;
-  CLAUDE_BIN = null;
-  try { // apps opened from Finder don't get the shell's PATH, so ask a login shell
-    const found = execFileSync('/bin/zsh', ['-lic', 'command -v claude'], { timeout: 8000, encoding: 'utf8' }).trim().split('\n').pop();
-    if (found && fs.existsSync(found)) CLAUDE_BIN = found;
-  } catch { /* not installed */ }
-  return CLAUDE_BIN;
+  if (CLAUDE_BIN !== undefined) return Promise.resolve(CLAUDE_BIN);
+  const saved = readJson('config.json', {}).claudePath;
+  if (saved && fs.existsSync(saved)) { CLAUDE_BIN = saved; return Promise.resolve(saved); }
+  findingBin ||= new Promise((resolve) => {
+    execFile('/bin/zsh', ['-lic', 'command -v claude'], { timeout: 10000, encoding: 'utf8' }, (err, out) => {
+      const found = !err && String(out).trim().split('\n').pop();
+      CLAUDE_BIN = found && fs.existsSync(found) ? found : null;
+      if (CLAUDE_BIN) writeJson('config.json', { ...readJson('config.json', {}), claudePath: CLAUDE_BIN });
+      findingBin = null; resolve(CLAUDE_BIN);
+    });
+  });
+  return findingBin;
 }
-function askClaudeCode(system, user, schema, effort) {
+async function askClaudeCode(system, user, schema, effort, model) {
+  const bin = await claudeBin();
   return new Promise((resolve, reject) => {
-    const bin = claudeBin();
     if (!bin) return reject(Object.assign(new Error('Add an Anthropic API key in Settings, or install Claude Code to use your Claude plan.'), { code: 'NO_KEY' }));
     // Restricted, no tools, no settings or MCP servers: a plain question with a structured answer.
-    const args = ['-p', '--output-format', 'json', '--no-session-persistence', '--restricted', '--strict-mcp-config', '--tools', '', '--effort', effort || 'low', '--system-prompt', system, '--json-schema', JSON.stringify(schema)];
+    const args = ['-p', '--output-format', 'json', '--no-session-persistence', '--restricted', '--strict-mcp-config', '--tools', '', '--effort', effort || 'low', '--model', model, '--system-prompt', system, '--json-schema', JSON.stringify(schema)];
     const child = spawn(bin, args, { cwd: app.getPath('temp'), env: { ...process.env, PATH: `${path.dirname(bin)}:${process.env.PATH}` } });
     let out = '', err = '';
     const timer = setTimeout(() => { child.kill(); reject(new Error('Claude Code took too long. Try again.')); }, 240000);
@@ -74,10 +86,10 @@ function askClaudeCode(system, user, schema, effort) {
 }
 
 // One structured call. Server-side fallbacks re-run the request on a fallback model if the first declines.
-async function ask(system, user, schema, effort) {
-  if (!getKey()) return askClaudeCode(system, user, schema, effort);
+async function ask(system, user, schema, effort, model = modelFor()) {
+  if (!getKey()) return askClaudeCode(system, user, schema, effort, model);
   const res = await client().beta.messages.create({
-    model: MODEL,
+    model,
     max_tokens: 16000,
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default',
@@ -121,6 +133,31 @@ function compileCheck({ language, script }) {
   });
 }
 
+// ---------- ideas: cached per pair, and shared between a prefetch and the real request ----------
+// Hovering one app over another starts the request early, so the ideas are often ready on drop.
+const IDEA_TTL = 7 * 24 * 3600 * 1000;
+const inflight = new Map();
+const pairKey = (a, b) => [a.id, b.id].sort().join('|') + '|' + modelFor();
+function getIdeas(a, b, { fresh = false } = {}) {
+  if (MOCK) return MOCK.ideas(a, b);
+  const key = pairKey(a, b);
+  if (!fresh) {
+    const hit = readJson('ideas-cache.json', {})[key];
+    if (hit && Date.now() - hit.at < IDEA_TTL) return Promise.resolve(hit.data);
+    if (inflight.has(key)) return inflight.get(key);
+  }
+  const p = ask(...ideasPrompt(a, b), IDEAS_SCHEMA, 'low').then((data) => {
+    const cache = readJson('ideas-cache.json', {});
+    cache[key] = { at: Date.now(), data };
+    // keep the newest 200 pairs
+    const keep = Object.entries(cache).sort((x, y) => y[1].at - x[1].at).slice(0, 200);
+    writeJson('ideas-cache.json', Object.fromEntries(keep));
+    return data;
+  }).finally(() => inflight.delete(key));
+  inflight.set(key, p);
+  return p;
+}
+
 // Build: write the script, check it compiles, and let Claude fix it once if it doesn't.
 async function buildFusion(sender, a, b, idea) {
   const stage = (s) => { try { sender.send('fuse:stage', s); } catch { /* window closed */ } };
@@ -130,7 +167,7 @@ async function buildFusion(sender, a, b, idea) {
   let error = await compileCheck(plan);
   if (error && !MOCK) {
     stage('fixing');
-    plan = await ask(...fixPrompt(a, b, plan, error), BUILD_SCHEMA, 'medium');
+    plan = await ask(...fixPrompt(a, b, plan, error), BUILD_SCHEMA, 'medium', FIX_MODEL);
     stage('checking');
     error = await compileCheck(plan);
   }
@@ -152,10 +189,20 @@ function runScript({ language, script }) {
 }
 
 // ---------- IPC ----------
-handle('apps:list', () => listApps(store('icons')));
-handle('key:status', () => ({ hasKey: !!getKey(), claudeCode: !!claudeBin() }));
+// The app list is cached so the board shows instantly; a fresh scan follows in the background.
+let scanning = null;
+const scanApps = () => (scanning ||= listApps(store('icons')).then((list) => { writeJson('apps.json', list); return list; }).finally(() => { scanning = null; }));
+handle('apps:list', async () => {
+  const cached = readJson('apps.json', null);
+  if (cached?.length) return { apps: cached, cached: true };
+  return { apps: await scanApps(), cached: false };
+});
+handle('apps:refresh', () => scanApps());
+handle('key:status', async () => ({ hasKey: !!getKey(), claudeCode: !!(await claudeBin()), speed: readJson('config.json', {}).speed || 'best' }));
+handle('speed:set', (speed) => { writeJson('config.json', { ...readJson('config.json', {}), speed: speed === 'fast' ? 'fast' : 'best' }); return true; });
+handle('fuse:prefetch', (a, b) => { getIdeas(a, b).catch(() => {}); return true; });
 handle('key:set', (key) => { setKey(key); return true; });
-handle('fuse:ideas', (a, b) => (MOCK ? MOCK.ideas(a, b) : ask(...ideasPrompt(a, b), IDEAS_SCHEMA, 'low')));
+handle('fuse:ideas', (a, b, opts) => getIdeas(a, b, opts));
 ipcMain.handle('fuse:build', async (e, a, b, idea) => {
   try { return { ok: true, data: await buildFusion(e.sender, a, b, idea) }; } catch (err) { return { ok: false, error: friendlyError(err) }; }
 });
@@ -195,6 +242,8 @@ function migrateOldData() {
       const from = path.join(old, f), to = path.join(now, f);
       if (fs.existsSync(from) && !fs.existsSync(to)) fs.copyFileSync(from, to);
     }
+    const icons = path.join(old, 'icons'); // saves re-extracting every icon on first launch
+    if (fs.existsSync(icons) && !fs.existsSync(path.join(now, 'icons'))) fs.cpSync(icons, path.join(now, 'icons'), { recursive: true });
   }
 }
 function createWindow() {

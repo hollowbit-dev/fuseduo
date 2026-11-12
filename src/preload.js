@@ -3,6 +3,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 const call = (ch) => (...args) => ipcRenderer.invoke(ch, ...args);
 contextBridge.exposeInMainWorld('fuse', {
   apps: call('apps:list'),
+  refreshApps: call('apps:refresh'),
+  prefetch: call('fuse:prefetch'),
+  setSpeed: call('speed:set'),
   keyStatus: call('key:status'),
   setKey: call('key:set'),
   ideas: call('fuse:ideas'),

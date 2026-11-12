@@ -188,6 +188,12 @@ function setTarget(t) {
   drag.target?.classList.remove('target');
   drag.target = t;
   t?.classList.add('target');
+  // Hovering over a target for a moment starts asking Claude for ideas, so they are often ready on drop.
+  clearTimeout(drag.prefetchTimer);
+  if (t) {
+    const b = byId(t.dataset.id), a = drag.app;
+    drag.prefetchTimer = setTimeout(() => { if (drag.target === t && b) window.fuse.prefetch(a, b); }, 350);
+  }
 }
 // Hover a sidebar shelf while dragging and it opens, like spring-loaded folders in Finder.
 function springLoad() {
@@ -255,30 +261,40 @@ const vividHex = vivid; // CSS accepts hsl() wherever a colour goes
 const gloss = (hex) => `radial-gradient(circle at 34% 28%, rgba(255,255,255,.95), transparent 26%), radial-gradient(circle at 50% 55%, ${vivid(hex)}, color-mix(in srgb, ${vivid(hex)} 55%, #120d24) 100%)`;
 
 // ---------- sparks (canvas) ----------
-const sparks = { list: [], running: false };
-function burst(x, y, colors, n = 70) {
-  const cv = $('#sparks'), dpr = devicePixelRatio || 1;
-  if (cv.width !== innerWidth * dpr) { cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; }
+// Each colour's glow is drawn once into a small sprite; per frame we only stamp sprites
+// (canvas shadowBlur on every particle cost ~160 ms a frame on a retina screen).
+const sparks = { list: [], running: false, sprites: new Map() };
+function sprite(color) {
+  if (sparks.sprites.has(color)) return sparks.sprites.get(color);
+  const c = document.createElement('canvas'); c.width = c.height = 32;
+  const g = c.getContext('2d'), grad = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  grad.addColorStop(0, '#fff'); grad.addColorStop(0.18, color); grad.addColorStop(0.45, color.replace(/\)$/, ' / .35)')); grad.addColorStop(1, 'transparent');
+  g.fillStyle = grad; g.fillRect(0, 0, 32, 32);
+  sparks.sprites.set(color, c); return c;
+}
+function burst(x, y, colors, n = 60) {
+  const cv = $('#sparks'), dpr = Math.min(2, devicePixelRatio || 1);
+  if (cv.width !== Math.round(innerWidth * dpr) || cv.height !== Math.round(innerHeight * dpr)) { cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr); }
   for (let i = 0; i < n; i++) {
     const ang = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 9;
-    sparks.list.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 1.5, life: 1, decay: 0.012 + Math.random() * 0.022, r: 1 + Math.random() * 2.6, c: colors[i % colors.length] });
+    sparks.list.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 1.5, life: 1, decay: 0.014 + Math.random() * 0.022, r: 7 + Math.random() * 9, img: sprite(colors[i % colors.length]) });
   }
   if (!sparks.running) { sparks.running = true; requestAnimationFrame(drawSparks); }
 }
 function drawSparks() {
-  const cv = $('#sparks'), ctx = cv.getContext('2d'), dpr = devicePixelRatio || 1;
+  const cv = $('#sparks'), ctx = cv.getContext('2d'), dpr = Math.min(2, devicePixelRatio || 1);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, innerWidth, innerHeight);
   ctx.globalCompositeOperation = 'lighter';
   sparks.list = sparks.list.filter((p) => p.life > 0);
   for (const p of sparks.list) {
     p.vx *= 0.94; p.vy = p.vy * 0.94 + 0.12; p.x += p.vx; p.y += p.vy; p.life -= p.decay;
+    const s = p.r * (0.45 + p.life * 0.65);
     ctx.globalAlpha = Math.max(0, p.life);
-    ctx.fillStyle = p.c; ctx.shadowColor = p.c; ctx.shadowBlur = 12;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (0.5 + p.life * 0.6), 0, Math.PI * 2); ctx.fill();
-    // a short streak behind each spark
-    ctx.globalAlpha = Math.max(0, p.life) * 0.4; ctx.lineWidth = p.r; ctx.strokeStyle = p.c;
-    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 3, p.y - p.vy * 3); ctx.stroke();
+    ctx.drawImage(p.img, p.x - s, p.y - s, s * 2, s * 2);
+    // a short fading trail: two smaller stamps behind the spark
+    ctx.globalAlpha = Math.max(0, p.life) * 0.35;
+    ctx.drawImage(p.img, p.x - p.vx * 1.5 - s * 0.6, p.y - p.vy * 1.5 - s * 0.6, s * 1.2, s * 1.2);
   }
   if (sparks.list.length) requestAnimationFrame(drawSparks);
   else { sparks.running = false; ctx.clearRect(0, 0, innerWidth, innerHeight); }
@@ -389,6 +405,18 @@ function showError(msg, retry) {
   foot(acts.length ? acts : null);
 }
 
+async function moreIdeas() {
+  const mine = current, { a, b } = current;
+  setTitle('Thinking of more…'); setStep('ideas'); foot(null);
+  body().replaceChildren(el('div', 'ghostcard'), el('div', 'ghostcard'), el('div', 'ghostcard'));
+  busy(true, 'Asking Claude for three new ideas.');
+  const r = await window.fuse.ideas(a, b, { fresh: true });
+  if (current !== mine) return;
+  if (!r.ok) return showError(r.error, moreIdeas);
+  current.ideas = r.data.ideas || [];
+  busy(false); showIdeas();
+}
+
 async function fuseApps(a, b, from) {
   if (!a || !b) return;
   current = { a, b, fusionId: `f${Date.now()}` };
@@ -425,7 +453,8 @@ function showIdeas() {
   custom.append(field, el('button', 'btn btn-quiet', 'Build'));
   custom.onsubmit = (e) => { e.preventDefault(); const t = input.value.trim(); if (t) build({ title: t, description: t }); };
   body().replaceChildren(...nodes, custom);
-  foot(null);
+  const more = el('button', 'btn btn-quiet', 'More ideas'); more.onclick = moreIdeas;
+  foot([more]);
 }
 
 async function build(idea) {
@@ -605,6 +634,7 @@ async function refreshKey() {
   const text = d.hasKey ? 'Claude API key' : d.claudeCode ? 'Your Claude plan' : 'Connect Claude';
   const cls = d.hasKey || d.claudeCode ? 'ok' : 'warn';
   $('#conn').className = `conn ${cls}`; $('#connText').textContent = text;
+  document.querySelectorAll('#speed button').forEach((b) => b.classList.toggle('on', b.dataset.speed === (d.speed || 'best')));
   $('#provider').textContent = d.hasKey ? 'Using your Anthropic API key.' : d.claudeCode ? 'Using your Claude plan through Claude Code. No API key needed.' : 'No Claude connection yet. Install Claude Code, or add an API key below.';
   const w = $('#welcomeConn');
   w.className = `welcome-conn ${cls}`;
@@ -612,6 +642,10 @@ async function refreshKey() {
 }
 function openSettings() { refreshKey(); $('#keyInput').value = ''; $('#modal').hidden = false; }
 $('#settingsBtn').onclick = openSettings;
+$('#speed').addEventListener('click', async (e) => {
+  const b = e.target.closest('button[data-speed]'); if (!b) return;
+  await window.fuse.setSpeed(b.dataset.speed); refreshKey();
+});
 $('#conn').onclick = openSettings;
 $('#modalCancel').onclick = () => { $('#modal').hidden = true; };
 $('#modal').onclick = (e) => { if (e.target.id === 'modal') $('#modal').hidden = true; };
@@ -651,7 +685,16 @@ let LOADING = true;
   renderNav(); renderBoard();
   const [apps, fusions] = await Promise.all([window.fuse.apps(), window.fuse.fusions()]);
   LOADING = false;
-  APPS = apps.ok ? apps.data : [];
+  APPS = apps.ok ? apps.data.apps : [];
+  // The list above may come from the cache; a fresh scan replaces it quietly if anything changed.
+  if (apps.ok && apps.data.cached) {
+    window.fuse.refreshApps().then((r) => {
+      if (!r.ok) return;
+      const sig = (l) => l.map((x) => x.id + x.icon).join();
+      if (sig(r.data) === sig(APPS)) return;
+      APPS = r.data; $('#board').classList.add('calm'); renderNav(); if (!drag.on) renderBoard();
+    });
+  }
   if (!apps.ok) $('#boardStatus').textContent = `Couldn’t list apps: ${apps.error}`;
   if (!pr.data?.favourites) savePrefs({ favourites: STARTERS.filter(byId).slice(0, 12) });
   setView(PREFS.view, { quiet: true });

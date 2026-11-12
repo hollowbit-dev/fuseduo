@@ -90,6 +90,11 @@
   <div class="modal-card">
     <h2>Settings</h2>
     <div class="provider" id="provider"></div>
+    <label>Speed</label>
+    <div class="seg" id="speed" role="radiogroup" aria-label="Speed">
+      <button data-speed="best"><b>Best</b><span>Claude Opus 5.5. Most careful.</span></button>
+      <button data-speed="fast"><b>Fast</b><span>Claude Sonnet 5.5. About 3× quicker.</span></button>
+    </div>
     <label for="keyInput">Anthropic API key <span class="muted">(optional)</span></label>
     <input id="keyInput" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
     <p class="muted small">With a key, Fuseduo calls the Claude API directly. It is stored encrypted with your Mac’s keychain and only ever sent to Anthropic. <a href="#" id="getKey">Get a key</a></p>
