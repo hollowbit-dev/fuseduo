@@ -9,14 +9,21 @@ real script (AppleScript, JavaScript for Automation or zsh), checks that it comp
 plain English exactly what it will do. Nothing runs until you approve it. Save the fusions you like
 and run them again in one click.
 
-A [Hollowbit Studio](https://hollowbit.dev) project · [hollowbit.dev/fuseduo](https://hollowbit.dev/fuseduo/). Status: early preview, Mac only.
+<p align="center">
+  <a href="https://github.com/hollowbit-dev/fuseduo/releases/latest/download/Fuseduo-1.0.0-mac-arm64.dmg"><b>Download for Mac (Apple Silicon)</b></a> ·
+  <a href="https://github.com/hollowbit-dev/fuseduo/releases/latest/download/Fuseduo-1.0.0-mac-x64.dmg">Intel</a> ·
+  <a href="https://hollowbit.dev/fuseduo/">Website</a>
+</p>
+
+A [Hollowbit Studio](https://hollowbit.dev) project. Free and open source, macOS 12 or later.
+The app isn't signed with a paid Apple certificate: the first time, right-click Fuseduo in Applications and choose **Open**.
 
 ## How it works
 
 1. **Drag** one app onto another.
 2. **Pick** one of three ideas, or type your own.
 3. **Review** the plan: the steps, a risk rating, the macOS permissions it needs and how to undo it.
-4. **Run** it once you approve, or save it to your fusions.
+4. **Run** it once you approve, save it to your fusions, or turn it into a **Mac app** with its own icon.
 
 Every script goes through a compile check (`osacompile` / `zsh -n`) and a safety block-list
 (deleting files, `sudo`, sending messages, piping downloads into a shell and more) before the Run

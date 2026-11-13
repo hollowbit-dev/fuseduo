@@ -1,7 +1,7 @@
 {
   "name": "fuseduo",
   "productName": "Fuseduo",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": true,
   "author": "Hollowbit Studio",
   "description": "Fuseduo: drag one app onto another and Claude builds a real automation.",
@@ -10,7 +10,7 @@
     "start": "electron .",
     "test": "node --test test/ && node scripts/ui-test.cjs dark && node scripts/refine-test.cjs && node scripts/quick-test.cjs && node scripts/app-test.cjs && node scripts/overflow-test.cjs",
     "test:unit": "node --test test/",
-    "dist": "electron-builder --mac --publish never",
+    "dist": "electron-builder --mac dmg:arm64 --publish never && electron-builder --mac dmg:x64 --publish never",
     "icon": "swift scripts/make-icon.swift assets/icon.png"
   },
   "dependencies": {
