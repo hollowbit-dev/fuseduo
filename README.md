@@ -20,7 +20,7 @@
 </p>
 
 <p align="center"><sub>
-  <a href="https://hollowbit.dev/fuseduo/">Website</a> · ▶ <a href="https://hollowbit.dev/fuseduo/">Watch the 20-second film</a> · <code>brew install --cask hollowbit-dev/tap/fuseduo</code>
+  <a href="https://hollowbit.dev/fuseduo/">Website</a> · ▶ <a href="https://hollowbit.dev/fuseduo/">Watch the 20-second film</a> · Homebrew: <code>brew tap hollowbit-dev/tap &amp;&amp; brew trust hollowbit-dev/tap &amp;&amp; brew install --cask fuseduo</code>
 </sub></p>
 
 Fuseduo is a board of every app on your Mac. Drag one app onto another and it suggests three things
