@@ -1,7 +1,7 @@
 {
   "name": "fuseduo",
   "productName": "Fuseduo",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "author": "Hollowbit Studio",
   "description": "Fuseduo: drag one app onto another and Claude builds a real automation.",
