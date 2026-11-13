@@ -97,6 +97,7 @@
     </div>
     <div class="provider" id="provider"></div>
     <p class="muted small">Claude Code mode runs the Claude Code app you installed and signed in to, so requests count towards your own Claude plan's limits. Fuseduo never sees or stores your Claude login.</p>
+    <button class="btn btn-quiet sm perm-open" id="permOpen">Permissions…</button>
     <label>Speed</label>
     <div class="seg" id="speed" role="radiogroup" aria-label="Speed">
       <button data-speed="best"><b>Best</b><span>Claude Opus 5.5. Most careful.</span></button>
@@ -117,6 +118,7 @@
 <!-- first launch -->
 <div id="welcome" class="welcome" hidden>
   <div class="welcome-card">
+   <div id="welcomeIntro" class="welcome-step">
     <div class="demo" aria-hidden="true">
       <div class="demo-goo"><span class="dg a"></span><span class="dg b"></span></div>
       <span class="demo-ring"></span>
@@ -133,7 +135,24 @@
       <li><b>Approve</b><span>after reading the plan</span></li>
     </ol>
     <div class="welcome-conn" id="welcomeConn"></div>
-    <button class="btn btn-primary lg" id="welcomeGo">Start fusing</button>
+    <button class="btn btn-primary lg" id="welcomeGo">Next</button>
+   </div>
+   <div id="permStep" class="welcome-step" hidden>
+    <h2>Two quick permissions.</h2>
+    <p class="lede">macOS asks before one app can control another. Allow them now so fusions just work.</p>
+    <div class="perm-row" id="permRowAuto">
+      <div class="perm-ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg></div>
+      <div class="perm-txt"><b>Control your apps</b><span>So fusions can talk to Notes, Calendar, Music and the rest. Asks for the apps you have open now.</span><em id="permAutoOut"></em></div>
+      <button class="btn btn-quiet sm" id="permAuto">Allow</button>
+    </div>
+    <div class="perm-row" id="permRowDesk">
+      <div class="perm-ic"><svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2H10l2 2h6.5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg></div>
+      <div class="perm-txt"><b>Your Desktop folder</b><span>Some fusions save new files to a Fusions folder there. Nothing else is touched.</span><em id="permDeskOut"></em></div>
+      <button class="btn btn-quiet sm" id="permDesk">Allow</button>
+    </div>
+    <p class="muted small">Change these any time in <a href="#" id="permSettings">System Settings › Privacy &amp; Security</a>.</p>
+    <div class="perm-actions"><button class="btn btn-quiet" id="permSkip">Skip for now</button><button class="btn btn-primary lg" id="permDone">Start fusing</button></div>
+   </div>
   </div>
 </div>
 

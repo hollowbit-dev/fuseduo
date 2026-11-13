@@ -21,7 +21,14 @@ const ideasPrompt = (a, b) => [SYSTEM,
   `Fuse these two apps: ${label(a)} and ${label(b)}.
 Give 3 different automation ideas that use both apps and can run right now as one script. Order them from most delightful to most practical.`];
 
-const buildPrompt = (a, b, idea) => [SYSTEM,
+// "Mac app" mode: the automation becomes a double-clickable app, so it may ask the person things first.
+const APP_RULES = `
+This one becomes a standalone Mac app the person double-clicks (an AppleScript or JXA applet), not a one-off run:
+- Write AppleScript or JavaScript (JXA) only, never a shell script (use "do shell script" inside AppleScript if you need the shell).
+- It may ask the person for input first with native dialogs: display dialog (with default answer for text), choose from list, choose file, choose folder. Ask only what the automation genuinely needs, at most two questions, and handle Cancel gracefully (stop quietly).
+- End by telling the person what happened with a short display notification or display dialog with a single OK button, instead of printing.`;
+
+const buildPrompt = (a, b, idea, mode) => [mode === 'app' ? SYSTEM + APP_RULES : SYSTEM,
   `Fuse ${label(a)} and ${label(b)} into this automation:
 Title: ${idea.title}
 What it does: ${idea.description}
@@ -74,7 +81,7 @@ ${plan.script}
 Fix the script so it compiles and still does the same thing. Return the whole automation again.`];
 
 // Refine: the person describes a change in plain English; return the whole automation again.
-const refinePrompt = (a, b, plan, instruction) => [SYSTEM,
+const refinePrompt = (a, b, plan, instruction, mode) => [mode === 'app' ? SYSTEM + APP_RULES : SYSTEM,
   `This automation fuses ${label(a)} and ${label(b)}.
 
 Current version:

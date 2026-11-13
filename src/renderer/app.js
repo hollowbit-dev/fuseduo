@@ -10,6 +10,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const ICON = {
   star: '<svg viewBox="0 0 24 24"><path d="m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4l-4.8 2.5.9-5.4L4.2 9.7l5.4-.8z"/></svg>',
   play: '<svg viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z"/></svg>',
+  app: '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4.5"/></svg>',
 };
 
 let APPS = [];
@@ -458,9 +459,16 @@ function showIdeas() {
   const field = el('label', 'field'); const input = el('input'); input.placeholder = 'Or describe your own…'; field.append(input);
   custom.append(field, el('button', 'btn btn-quiet', 'Build'));
   custom.onsubmit = (e) => { e.preventDefault(); const t = input.value.trim(); if (t) build({ title: t, description: t }); };
+  current.mode ||= PREFS.makeMode || 'script';
+  const makeSeg = el('div', 'make-seg');
+  [['script', 'Quick script', 'Runs here, right now'], ['app', 'Mac app', 'Double-click it any time']].forEach(([m, t, d]) => {
+    const b = el('button', current.mode === m ? 'on' : ''); b.append(el('b', '', t), el('span', '', d));
+    b.onclick = () => { current.mode = m; savePrefs({ makeMode: m }); makeSeg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); };
+    makeSeg.append(b);
+  });
   const limitedApps = [current.a, current.b].filter((x) => x.scriptable === false).map((x) => x.name);
   const note = limitedApps.length ? el('p', 'limited', `${limitedApps.join(' and ')} ${limitedApps.length > 1 ? 'have' : 'has'} limited automation support on macOS, so ideas use opening, links and Shortcuts rather than full control.`) : null;
-  body().replaceChildren(...(note ? [note] : []), ...nodes, custom);
+  body().replaceChildren(makeSeg, ...(note ? [note] : []), ...nodes, custom);
   const more = el('button', 'btn btn-quiet', 'More ideas'); more.onclick = moreIdeas;
   foot([more]);
 }
@@ -469,10 +477,11 @@ async function build(idea) {
   const mine = current; current.idea = idea;
   setTitle(idea.title);
   setStep('build');
+  current.previous = null; current.dirty = false;
   body().replaceChildren(el('div', 'ghostcard tall'), el('div', 'ghostcard'));
   foot(null);
   busy(true, STAGES.writing);
-  const r = await window.fuse.build(current.a, current.b, idea);
+  const r = await window.fuse.build(current.a, current.b, idea, current.mode || 'script');
   if (current !== mine) return;
   if (!r.ok) return showError(r.error, () => build(idea));
   current.plan = r.data;
@@ -528,6 +537,7 @@ async function showPlan() {
   const meter = el('div', 'meter'); meter.append(el('i'), el('i'), el('i'));
   risk.append(meter, el('b', '', `${plan.risk[0].toUpperCase()}${plan.risk.slice(1)} risk`));
   const badges = el('div', 'badges');
+  if (plan.mode === 'app') badges.append(el('span', 'badge app', 'Mac app'));
   badges.append(el('span', 'badge', LANG[plan.language] || plan.language));
   if ('compileError' in plan) badges.append(el('span', `badge ${plan.compileError ? 'high' : 'ok'}`, plan.compileError ? 'Doesn’t compile' : 'Compiles ✓'));
   (plan.permissions || []).forEach((p) => badges.append(el('span', 'badge', p)));
@@ -558,7 +568,27 @@ async function showPlan() {
   const syncSave = () => { const saved = isSaved(); save.textContent = saved ? (current.dirty ? 'Save changes' : 'Saved ✓') : 'Save'; save.disabled = saved && !current.dirty; };
   syncSave();
   const back = el('button', 'btn btn-quiet', current.ideas ? 'Other ideas' : 'Close');
-  foot([back, save, run]);
+  const asApp = plan.mode === 'app';
+  const blockedNow = () => !verdict.data?.ok || !!plan.compileError;
+  const create = el('button', 'btn btn-primary'); create.append(svgEl(ICON.app), 'Create app');
+  if (asApp) { run.classList.replace('btn-primary', 'btn-quiet'); run.lastChild.textContent = 'Test run'; foot([back, run, create]); }
+  else foot([back, save, run]);
+  create.onclick = async () => {
+    create.classList.add('busy'); create.lastChild.textContent = 'Creating…';
+    const iconPng = await fusedIcon(a, b);
+    const r = await window.fuse.makeApp({ name: plan.name, language: plan.language, script: plan.script, iconPng });
+    create.classList.remove('busy');
+    if (!r.ok) { create.lastChild.textContent = 'Create app'; showResult(false, r.error); return; }
+    create.lastChild.textContent = 'Created ✓';
+    const msg = el('div', 'result ok'); const m = el('div', 'result-msg');
+    m.append(el('b', '', `${plan.name}.app is in Applications › Fusions. Double-click it, or drag it to your Dock.`));
+    const open = el('button', 'btn btn-quiet sm', 'Open it now'); open.onclick = () => window.fuse.openApp(r.data); m.append(open);
+    msg.append(checkIcon(), m); out.replaceWith(msg); msg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const c = center(create); burst(c.x, c.y - 10, ['#ffffff', vivid(a.color), vivid(b.color)], 34);
+    const f = { id: current.fusionId, a: pick(a), b: pick(b), idea: current.idea, plan: current.plan, app: r.data, savedAt: new Date().toISOString() };
+    const s2 = await window.fuse.saveFusion(f); if (s2.ok) { FUSIONS = s2.data; renderShelf(f.id); }
+  };
+  if (blockedNow()) create.disabled = true;
   const blocked = !verdict.data?.ok ? `Blocked for safety: ${verdict.data?.reason || verdict.error}` : plan.compileError ? `This script doesn’t compile, so it won’t run:\n${plan.compileError}` : null;
   const showResult = (ok, text, why) => {
     out.hidden = false; out.className = `result ${ok ? 'ok' : 'bad'}`;
@@ -609,6 +639,19 @@ async function refineFusion(instruction) {
   showPlan();
   toast('Updated. Read the new steps before you run it.');
 }
+// The new app's icon: the two apps' icons, overlapping, 1024 px.
+function fusedIcon(a, b) {
+  return new Promise((resolve) => {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 1024; const g = cv.getContext('2d');
+    const load = (src) => new Promise((r) => { if (!src) return r(null); const im = new Image(); im.onload = () => r(im); im.onerror = () => r(null); im.src = src; });
+    Promise.all([load(a.icon), load(b.icon)]).then(([A, B]) => {
+      g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 40; g.shadowOffsetY = 16;
+      if (A) g.drawImage(A, 60, 60, 640, 640);
+      if (B) g.drawImage(B, 324, 324, 640, 640);
+      resolve(cv.toDataURL('image/png'));
+    });
+  });
+}
 const pick = (x) => ({ id: x.id, name: x.name, icon: x.icon, color: x.color, scriptable: x.scriptable });
 
 // ---------- fusions shelf ----------
@@ -642,8 +685,10 @@ function renderShelf(fresh) {
     if (f.runs) st.append(` · ${f.runs} run${f.runs === 1 ? '' : 's'}`);
     const meta = el('span', 'fmeta'); meta.append(el('b', '', f.plan.name), st);
     const play = el('button', 'play'); play.title = 'Run now'; play.setAttribute('aria-label', `Run ${f.plan.name}`); play.append(svgEl(ICON.play));
+    if (f.app) { play.title = 'Open the app'; }
     play.onclick = async (e) => {
       e.stopPropagation();
+      if (f.app) { window.fuse.openApp(f.app); toast(`Opening ${f.plan.name}…`); return; }
       play.classList.add('spin'); st.className = 'fstatus running'; st.replaceChildren(el('span', 'dot'), 'Running…');
       const r = await window.fuse.run({ language: f.plan.language, script: f.plan.script, id: f.id });
       const res = r.ok ? r.data : { ok: false, output: r.error };
@@ -689,6 +734,7 @@ async function refreshKey() {
 }
 function openSettings() { refreshKey(); $('#keyInput').value = ''; $('#modal').hidden = false; }
 $('#settingsBtn').onclick = openSettings;
+$('#permOpen').onclick = () => { $('#modal').hidden = true; showPermissions(); };
 $('#conn-choice').addEventListener('click', async (e) => {
   const b = e.target.closest('button[data-provider]'); if (!b) return;
   await window.fuse.setProvider(b.dataset.provider); refreshKey();
@@ -756,11 +802,36 @@ function showWelcome() {
   const [a, b] = pair.length === 2 ? pair : APPS.filter((x) => x.icon).slice(0, 2);
   if (a) $('.demo-a').src = a.icon; if (b) $('.demo-b').src = b.icon; // the two apps that melt together
   if (a && b) { $('.dg.a').style.background = vivid(a.color); $('.dg.b').style.background = `linear-gradient(90deg, ${vivid(a.color)}, ${vivid(b.color)})`; } // the merged drop shows both colours
-  $('#welcome').hidden = false;
-  $('#welcomeGo').onclick = async () => {
-    savePrefs({ onboarded: true });
-    const w = $('#welcome'); w.classList.add('leaving'); await wait(440); w.hidden = true; w.classList.remove('leaving');
+  $('#welcome').hidden = false; $('#welcomeIntro').hidden = false; $('#permStep').hidden = true;
+  $('#welcomeGo').onclick = showPermissions;
+}
+async function closeWelcome() {
+  savePrefs({ onboarded: true });
+  const w = $('#welcome'); w.classList.add('leaving'); await wait(440); w.hidden = true; w.classList.remove('leaving');
+}
+// Step 2: ask macOS for what fusions need, up front and explained, instead of pop-ups mid-run.
+function showPermissions() {
+  $('#welcome').hidden = false; $('#welcomeIntro').hidden = true; $('#permStep').hidden = false;
+  const ids = [...new Set([...PREFS.favourites, ...PREFS.recent])].map(byId).filter((x) => x?.scriptable).map((x) => x.id);
+  const autoBtn = $('#permAuto'), deskBtn = $('#permDesk'), autoOut = $('#permAutoOut'), deskOut = $('#permDeskOut');
+  autoBtn.onclick = async () => {
+    autoBtn.classList.add('busy'); autoBtn.textContent = 'Asking…'; autoOut.textContent = 'Watch for macOS asking “Fuseduo wants access to control…”. Click OK for each.';
+    const r = await window.fuse.permAutomation(ids);
+    autoBtn.classList.remove('busy');
+    const res = r.ok ? r.data : {}, vals = Object.entries(res);
+    const ok = vals.filter(([, v]) => v === 'allowed').length, denied = vals.filter(([, v]) => v === 'denied').map(([k]) => byId(k)?.name || 'System Events');
+    autoBtn.textContent = denied.length ? 'Try again' : 'Allowed ✓'; autoBtn.disabled = !denied.length;
+    autoOut.textContent = denied.length ? `Blocked for ${denied.join(', ')}. Turn them on in System Settings › Privacy & Security › Automation.` : `Allowed for ${ok} app${ok === 1 ? '' : 's'}. Apps that aren’t open yet will ask the first time a fusion uses them.`;
+    $('#permRowAuto').classList.toggle('done', !denied.length);
   };
+  deskBtn.onclick = async () => {
+    const r = await window.fuse.permDesktop();
+    deskBtn.textContent = r.ok ? 'Allowed ✓' : 'Try again'; deskBtn.disabled = r.ok;
+    deskOut.textContent = r.ok ? 'A Fusions folder is ready on your Desktop.' : 'macOS blocked it. Allow Fuseduo under Files and Folders in System Settings.';
+    $('#permRowDesk').classList.toggle('done', r.ok);
+  };
+  $('#permSettings').onclick = (e) => { e.preventDefault(); window.fuse.openAutomation(); };
+  $('#permDone').onclick = closeWelcome; $('#permSkip').onclick = closeWelcome;
 }
 // On first launch, favourites start with familiar apps that are actually installed.
 const STARTERS = ['com.apple.Notes', 'com.apple.iCal', 'com.apple.reminders', 'com.apple.mail', 'com.apple.Safari', 'com.google.Chrome', 'com.apple.Music', 'com.spotify.client', 'com.apple.Photos', 'com.apple.MobileSMS', 'com.tinyspeck.slackmacgap', 'notion.id', 'com.microsoft.VSCode', 'com.apple.TextEdit', 'com.apple.Terminal', 'com.apple.finder'];

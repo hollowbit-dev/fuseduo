@@ -4,7 +4,7 @@
 const { app, BrowserWindow, ipcMain, safeStorage, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { execFile, spawn } = require('child_process');
+const { execFile, execFileSync, spawn } = require('child_process');
 const Anthropic = require('@anthropic-ai/sdk').default;
 const { listApps } = require('./apps');
 const { ideasPrompt, buildPrompt, fixPrompt, refinePrompt, IDEAS_SCHEMA, BUILD_SCHEMA } = require('./prompts');
@@ -163,12 +163,12 @@ function getIdeas(a, b, { fresh = false } = {}) {
 }
 
 // Build (or refine): write the script, check it compiles, and let Claude fix it once if it doesn't.
-async function buildFusion(sender, a, b, idea, refine) {
+async function buildFusion(sender, a, b, idea, refine, mode) {
   const stage = (s) => { try { sender.send('fuse:stage', s); } catch { /* window closed */ } };
   stage('writing');
   let plan;
-  if (refine) plan = MOCK ? await MOCK.refine(a, b, refine.plan, refine.instruction) : await ask(...refinePrompt(a, b, refine.plan, refine.instruction), BUILD_SCHEMA, 'low');
-  else plan = MOCK ? await MOCK.build(a, b, idea) : await ask(...buildPrompt(a, b, idea), BUILD_SCHEMA, 'low');
+  if (refine) plan = MOCK ? await MOCK.refine(a, b, refine.plan, refine.instruction) : await ask(...refinePrompt(a, b, refine.plan, refine.instruction, mode), BUILD_SCHEMA, 'low');
+  else plan = MOCK ? await MOCK.build(a, b, idea) : await ask(...buildPrompt(a, b, idea, mode), BUILD_SCHEMA, 'low');
   stage('checking');
   let error = await compileCheck(plan);
   if (error && !MOCK) {
@@ -177,7 +177,7 @@ async function buildFusion(sender, a, b, idea, refine) {
     stage('checking');
     error = await compileCheck(plan);
   }
-  return { ...plan, compileError: error };
+  return { ...plan, compileError: error, mode: mode || 'script' };
 }
 
 // ---------- running a script ----------
@@ -204,6 +204,56 @@ function runScript({ language, script, id }) {
 }
 function stopScript(id) { const c = running.get(id || 'adhoc'); if (!c) return false; c.stopped = true; c.kill('SIGTERM'); return true; }
 
+// ---------- turning a fusion into a real Mac app (an AppleScript / JXA applet) ----------
+const FUSION_APPS = process.env.FUSE_APPS_DIR || path.join(os.homedir(), 'Applications', 'Fusions'); // FUSE_APPS_DIR: tests only
+// an AppleScript string literal: backslashes and quotes escaped
+const asString = (x) => '"' + String(x).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+function makeApp({ name, language, script, iconPng }) {
+  const verdict = checkScript(language, script);
+  if (!verdict.ok) throw new Error(`Blocked for safety: ${verdict.reason}`);
+  fs.mkdirSync(FUSION_APPS, { recursive: true });
+  const safe = String(name || 'Fusion').replace(/[\/:*?"<>|]/g, '').trim().slice(0, 60) || 'Fusion';
+  const out = path.join(FUSION_APPS, `${safe}.app`);
+  const tmp = path.join(os.tmpdir(), `fuseduo-app-${process.pid}-${Date.now()}`);
+  // a shell script is wrapped so the applet runs it through zsh
+  const src = language === 'shell' ? `do shell script "/bin/zsh -c " & quoted form of ${asString(script)}` : script;
+  fs.writeFileSync(`${tmp}.src`, src);
+  fs.rmSync(out, { recursive: true, force: true });
+  const run = (cmd, args) => execFileSync(cmd, args, { stdio: 'pipe', timeout: 60000 });
+  try {
+    run('/usr/bin/osacompile', [...(language === 'javascript' ? ['-l', 'JavaScript'] : []), '-o', out, `${tmp}.src`]);
+    const plist = path.join(out, 'Contents', 'Info.plist');
+    const setKey = (k, v) => { try { run('/usr/libexec/PlistBuddy', ['-c', `Set :${k} ${v}`, plist]); } catch { run('/usr/libexec/PlistBuddy', ['-c', `Add :${k} string ${v}`, plist]); } };
+    setKey('NSAppleEventsUsageDescription', 'This Fuseduo fusion controls the apps it was made from.');
+    setKey('CFBundleIdentifier', `dev.hollowbit.fusion.${safe.replace(/[^A-Za-z0-9]/g, '').toLowerCase() || 'app'}`);
+    if (iconPng) { // the two apps' icons, fused, as the applet's icon
+      fs.writeFileSync(`${tmp}.png`, Buffer.from(iconPng.split(',')[1], 'base64'));
+      const set = `${tmp}.iconset`; fs.mkdirSync(set);   // every size macOS wants, then iconutil → .icns
+      for (const n of [16, 32, 128, 256, 512]) {
+        run('/usr/bin/sips', ['-z', String(n), String(n), `${tmp}.png`, '--out', path.join(set, `icon_${n}x${n}.png`)]);
+        run('/usr/bin/sips', ['-z', String(n * 2), String(n * 2), `${tmp}.png`, '--out', path.join(set, `icon_${n}x${n}@2x.png`)]);
+      }
+      run('/usr/bin/iconutil', ['-c', 'icns', set, '-o', path.join(out, 'Contents', 'Resources', 'applet.icns')]);
+    }
+    run('/usr/bin/codesign', ['--force', '--deep', '--sign', '-', out]); // changed files need a fresh (ad-hoc) signature
+    run('/usr/bin/touch', [out]);
+  } finally { for (const f of [`${tmp}.src`, `${tmp}.png`, `${tmp}.iconset`]) fs.rmSync(f, { recursive: true, force: true }); }
+  return out;
+}
+
+// ---------- first-launch permissions ----------
+// macOS asks once per app the first time Fuseduo sends it an Apple event. Asking up front, for apps that are
+// already running (so nothing gets launched), turns surprise pop-ups mid-run into one guided step.
+function automationCheck(bundleId) {
+  return new Promise((resolve) => {
+    const src = `if application id "${bundleId}" is running then\n tell application id "${bundleId}" to get name\n return "ok"\nelse\n return "not-running"\nend if`;
+    execFile('/usr/bin/osascript', ['-e', src], { timeout: 90000 }, (err, out, stderr) => {
+      if (!err) return resolve(String(out).trim() === 'ok' ? 'allowed' : 'not-running');
+      resolve(/-1743|Not authori/i.test(stderr || '') ? 'denied' : 'unknown');
+    });
+  });
+}
+
 // ---------- IPC ----------
 // The app list is cached so the board shows instantly; a fresh scan follows in the background.
 let scanning = null;
@@ -220,13 +270,17 @@ handle('speed:set', (speed) => { writeJson('config.json', { ...readJson('config.
 handle('fuse:prefetch', (a, b) => { getIdeas(a, b).catch(() => {}); return true; });
 handle('key:set', (key) => { setKey(key); return true; });
 handle('fuse:ideas', (a, b, opts) => getIdeas(a, b, opts));
-ipcMain.handle('fuse:build', async (e, a, b, idea) => {
-  try { return { ok: true, data: await buildFusion(e.sender, a, b, idea) }; } catch (err) { return { ok: false, error: friendlyError(err) }; }
+ipcMain.handle('fuse:build', async (e, a, b, idea, mode) => {
+  try { return { ok: true, data: await buildFusion(e.sender, a, b, idea, null, mode) }; } catch (err) { return { ok: false, error: friendlyError(err) }; }
 });
 ipcMain.handle('fuse:refine', async (e, a, b, plan, instruction) => {
-  try { return { ok: true, data: await buildFusion(e.sender, a, b, null, { plan, instruction }) }; } catch (err) { return { ok: false, error: friendlyError(err) }; }
+  try { return { ok: true, data: await buildFusion(e.sender, a, b, null, { plan, instruction }, plan.mode) }; } catch (err) { return { ok: false, error: friendlyError(err) }; }
 });
 handle('fuse:stop', (id) => stopScript(id));
+handle('app:make', (f) => { const out = makeApp(f); if (!process.env.FUSE_APPS_DIR) shell.showItemInFolder(out); return out; });
+handle('app:open', (p) => { if (String(p).startsWith(FUSION_APPS)) shell.openPath(p); return true; });
+handle('perm:automation', async (ids) => { const res = {}; for (const id of ['com.apple.systemevents', ...ids]) res[id] = await automationCheck(id); return res; });
+handle('perm:desktop', () => { const d = path.join(os.homedir(), 'Desktop', 'Fusions'); fs.mkdirSync(d, { recursive: true }); fs.accessSync(d, fs.constants.W_OK); return d; });
 handle('open:automation', () => { shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Automation'); return true; });
 handle('fuse:check', (f) => checkScript(f.language, f.script));
 handle('fuse:run', async (f) => {

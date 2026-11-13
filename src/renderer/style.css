@@ -419,6 +419,22 @@ kbd { font: 600 10.5px -apple-system, sans-serif; color: var(--text-3); padding:
 @keyframes dRes { 0%, 60% { opacity: 0; transform: scale(.3) rotate(-14deg); } 68% { opacity: 1; transform: scale(1) rotate(0); } 84% { opacity: 1; transform: scale(1); } 92%, 100% { opacity: 0; transform: scale(.85); } }
 @keyframes dCur { 0%, 2% { opacity: 0; transform: translate(-70px, 46px); } 8% { opacity: 1; transform: translate(-80px, 16px); } 13% { transform: translate(-80px, 16px) scale(.8); } 40% { opacity: 1; transform: translate(-6px, 16px) scale(.8); } 45% { transform: translate(-6px, 16px) scale(1); opacity: 1; } 52%, 100% { opacity: 0; transform: translate(-6px, 24px); } }
 
+/* make picker + permissions */
+.make-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 15px; background: var(--chip); box-shadow: var(--glass-rim); animation: rise .6s var(--spring-soft) both; }
+.make-seg button { padding: 9px 12px; border-radius: 11px; text-align: left; display: grid; gap: 1px; transition: background .2s, box-shadow .2s; }
+.make-seg b { font-size: 13.5px; } .make-seg span { font-size: 11.5px; color: var(--text-3); }
+.make-seg button.on { background: var(--chip-3); box-shadow: var(--glass-rim), 0 0 0 1.5px color-mix(in srgb, var(--a1) 60%, transparent); }
+.badge.app { color: #fff; background: var(--grad); box-shadow: none; }
+.welcome-step { display: grid; justify-items: center; gap: 14px; width: 100%; }
+.perm-row { width: 100%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; padding: 14px; border-radius: 16px; background: var(--chip); box-shadow: var(--glass-rim); text-align: left; transition: box-shadow .3s; }
+.perm-row.done { box-shadow: var(--glass-rim), 0 0 0 1.5px rgba(74,222,128,.45); }
+.perm-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--grad); }
+.perm-ic svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 1.8; stroke-linejoin: round; }
+.perm-txt { display: grid; gap: 3px; } .perm-txt b { font-size: 14px; } .perm-txt span { font-size: 12.5px; color: var(--text-2); line-height: 1.4; }
+.perm-txt em { font-style: normal; font-size: 12px; color: var(--a1); line-height: 1.4; } .perm-txt em:empty { display: none; }
+.perm-actions { display: flex; gap: 10px; align-items: center; }
+.perm-open { justify-self: start; }
+
 /* ---------- toast ---------- */
 .toast { position: fixed; left: 50%; bottom: 26px; z-index: 80; transform: translateX(-50%); padding: 10px 16px; border-radius: 13px; background: var(--sheet); box-shadow: var(--glass-rim), 0 14px 40px rgba(0,0,0,.35); font-size: 13px; animation: toastIn .55s var(--spring) both; display: flex; gap: 9px; align-items: center; }
 @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 16px) scale(.95); } }

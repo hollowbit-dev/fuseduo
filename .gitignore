@@ -6,3 +6,5 @@ HANDOFF.md
 scripts/shots/
 scripts/data-*/
 *.log
+scripts/apps-out/
+scripts/perm.png
