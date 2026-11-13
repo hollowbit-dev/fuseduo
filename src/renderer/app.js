@@ -677,13 +677,22 @@ async function refreshKey() {
   const cls = d.hasKey || d.claudeCode ? 'ok' : 'warn';
   $('#conn').className = `conn ${cls}`; $('#connText').textContent = text;
   document.querySelectorAll('#speed button').forEach((b) => b.classList.toggle('on', b.dataset.speed === (d.speed || 'best')));
-  $('#provider').textContent = d.hasKey ? 'Using your Anthropic API key.' : d.claudeCode ? 'Using your Claude plan through Claude Code. No API key needed.' : 'No Claude connection yet. Install Claude Code, or add an API key below.';
+  const prov = d.provider === 'auto' ? (d.hasKey ? 'key' : 'cli') : d.provider;
+  document.querySelectorAll('#conn-choice button').forEach((b) => b.classList.toggle('on', b.dataset.provider === prov));
+  const pv = d.provider === 'auto' ? (d.hasKey ? 'key' : 'cli') : d.provider;
+  $('#provider').textContent = pv === 'key'
+    ? (d.hasKey ? '✓ Using your Anthropic API key.' : 'Paste your API key below to use this.')
+    : (d.claudeCode ? '✓ Claude Code found and signed-in use is ready.' : 'Claude Code isn’t installed. Install it from claude.com/code, or switch to API key.');
   const w = $('#welcomeConn');
   w.className = `welcome-conn ${cls}`;
-  w.replaceChildren(el('span', 'dot'), d.hasKey ? 'Connected with your API key.' : d.claudeCode ? 'Connected to your Claude plan through Claude Code.' : 'Needs Claude Code or an API key. You can add one in Settings.');
+  w.replaceChildren(el('span', 'dot'), d.hasKey ? 'Connected with your API key.' : d.claudeCode ? 'Using your own Claude Code sign-in and plan. Switch to an API key any time in Settings.' : 'Needs Claude Code or an API key. You can add one in Settings.');
 }
 function openSettings() { refreshKey(); $('#keyInput').value = ''; $('#modal').hidden = false; }
 $('#settingsBtn').onclick = openSettings;
+$('#conn-choice').addEventListener('click', async (e) => {
+  const b = e.target.closest('button[data-provider]'); if (!b) return;
+  await window.fuse.setProvider(b.dataset.provider); refreshKey();
+});
 $('#speed').addEventListener('click', async (e) => {
   const b = e.target.closest('button[data-speed]'); if (!b) return;
   await window.fuse.setSpeed(b.dataset.speed); refreshKey();

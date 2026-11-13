@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('fuse', {
   refreshApps: call('apps:refresh'),
   prefetch: call('fuse:prefetch'),
   setSpeed: call('speed:set'),
+  setProvider: call('provider:set'),
   keyStatus: call('key:status'),
   setKey: call('key:set'),
   ideas: call('fuse:ideas'),

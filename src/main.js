@@ -86,8 +86,12 @@ async function askClaudeCode(system, user, schema, effort, model) {
 }
 
 // One structured call. Server-side fallbacks re-run the request on a fallback model if the first declines.
+// Connection (Settings): 'cli' = the person's own Claude Code sign-in and plan, 'key' = their API key,
+// 'auto' (default) = the key if one is saved, otherwise Claude Code.
+const provider = () => readJson('config.json', {}).provider || 'auto';
 async function ask(system, user, schema, effort, model = modelFor()) {
-  if (!getKey()) return askClaudeCode(system, user, schema, effort, model);
+  const p = provider();
+  if (p === 'cli' || (p === 'auto' && !getKey())) return askClaudeCode(system, user, schema, effort, model);
   const res = await client().beta.messages.create({
     model,
     max_tokens: 16000,
@@ -210,7 +214,8 @@ handle('apps:list', async () => {
   return { apps: await scanApps(), cached: false };
 });
 handle('apps:refresh', () => scanApps());
-handle('key:status', async () => ({ hasKey: !!getKey(), claudeCode: !!(await claudeBin()), speed: readJson('config.json', {}).speed || 'best' }));
+handle('key:status', async () => ({ hasKey: !!getKey(), claudeCode: !!(await claudeBin()), speed: readJson('config.json', {}).speed || 'best', provider: provider() }));
+handle('provider:set', (p) => { writeJson('config.json', { ...readJson('config.json', {}), provider: ['cli', 'key'].includes(p) ? p : 'auto' }); return true; });
 handle('speed:set', (speed) => { writeJson('config.json', { ...readJson('config.json', {}), speed: speed === 'fast' ? 'fast' : 'best' }); return true; });
 handle('fuse:prefetch', (a, b) => { getIdeas(a, b).catch(() => {}); return true; });
 handle('key:set', (key) => { setKey(key); return true; });

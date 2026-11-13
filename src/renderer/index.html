@@ -90,7 +90,13 @@
 <div id="modal" class="modal" hidden>
   <div class="modal-card">
     <h2>Settings</h2>
+    <label>Connection</label>
+    <div class="seg" id="conn-choice" role="radiogroup" aria-label="Connection">
+      <button data-provider="cli"><b>Claude Code</b><span>Your own plan and sign-in.</span></button>
+      <button data-provider="key"><b>API key</b><span>Billed to your Anthropic account.</span></button>
+    </div>
     <div class="provider" id="provider"></div>
+    <p class="muted small">Claude Code mode runs the Claude Code app you installed and signed in to, so requests count towards your own Claude plan's limits. Fuseduo never sees or stores your Claude login.</p>
     <label>Speed</label>
     <div class="seg" id="speed" role="radiogroup" aria-label="Speed">
       <button data-speed="best"><b>Best</b><span>Claude Opus 5.5. Most careful.</span></button>
