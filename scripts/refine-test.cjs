@@ -1,0 +1,30 @@
+// Mock-mode test: build a fusion, refine it, undo, save, refine again and save changes.
+const { _electron: electron } = require(process.env.HOME + '/.claude/skills/playwright-skill/node_modules/playwright');
+(async () => {
+  const dir = __dirname + '/..', data = __dirname + '/data-refine';
+  require('fs').rmSync(data, { recursive: true, force: true });
+  const app = await electron.launch({ args: [dir], cwd: dir, env: { ...process.env, FUSE_MOCK: '1', FUSE_DATA_DIR: data } });
+  const win = await app.firstWindow(); const errs = [];
+  win.on('pageerror', (e) => errs.push(e.message));
+  await win.waitForSelector('#welcomeGo'); await win.click('#welcomeGo'); await win.waitForTimeout(600);
+  await win.evaluate(() => window.__fuseTest('com.apple.Notes', 'com.apple.iCal'));
+  await win.waitForSelector('.idea', { timeout: 20000 }); await win.click('.idea');
+  await win.waitForSelector('.refine'); const steps0 = await win.$$eval('.steps li', (x) => x.length);
+  await win.fill('.refine input', 'also include tomorrow'); await win.click('.refine button.btn');
+  await win.waitForSelector('.refine .link', { timeout: 20000 });
+  const steps1 = await win.$$eval('.steps li', (x) => x.map((n) => n.textContent));
+  console.log('refined:', steps0, '->', steps1.length, '| last step:', steps1.at(-1));
+  await win.click('.refine .link'); await win.waitForTimeout(300);
+  console.log('after undo steps:', await win.$$eval('.steps li', (x) => x.length));
+  await win.click('#pFoot >> text=Save'); await win.waitForTimeout(400);
+  console.log('save button:', await win.textContent('#pFoot .btn-quiet:nth-child(2)'));
+  await win.fill('.refine input', 'shorter title'); await win.click('.refine button.btn');
+  await win.waitForSelector('.refine .link', { timeout: 20000 });
+  console.log('save after refine:', await win.textContent('#pFoot .btn-quiet:nth-child(2)'));
+  await win.click('#pFoot >> text=Save changes'); await win.waitForTimeout(400);
+  console.log('saved fusion steps:', await win.evaluate(async () => (await window.fuse.fusions()).data[0].plan.steps.length));
+  await win.click('#pFoot .btn-primary'); await win.waitForTimeout(1200);
+  console.log('run result:', (await win.textContent('.result')).trim().slice(0, 60));
+  console.log('errors', errs); await app.close();
+  require('fs').rmSync(data, { recursive: true, force: true });
+})();

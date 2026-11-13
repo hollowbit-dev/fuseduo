@@ -228,7 +228,11 @@ kbd { font: 600 10.5px -apple-system, sans-serif; color: var(--text-3); padding:
 .ring { position: fixed; left: 0; top: 0; width: 200px; height: 200px; margin: -100px 0 0 -100px; border-radius: 50%; opacity: 0; border: 2px solid transparent; background: conic-gradient(from 0deg, var(--ra, #9b7bff), var(--rb, #2fd6c6), var(--ra, #9b7bff)) border-box; -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
 .sparks { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 47; pointer-events: none; }
 
-/* ---------- panel ---------- */
+/* ---------- panel ----------
+   Electron hit-tests window drag regions (.head, .side-drag) underneath anything stacked on top,
+   so floating layers must opt out or clicks on them (like the panel's X) turn into window drags. */
+.panel, .modal, .welcome-card, .toast, .ghost { -webkit-app-region: no-drag; }
+.panel button, .panel input, .panel a, .panel summary { -webkit-app-region: no-drag; }
 .panel { position: fixed; top: 10px; right: 10px; bottom: 10px; width: min(480px, 46vw); z-index: 30; border-radius: 26px; background: var(--sheet); backdrop-filter: blur(44px) saturate(1.9); -webkit-backdrop-filter: blur(44px) saturate(1.9); box-shadow: var(--glass-rim), 0 30px 80px rgba(0,0,0,.45); display: flex; flex-direction: column; animation: sheet .7s var(--spring-soft) both; user-select: text; overflow: hidden; }
 .panel.closing { animation: sheetOut .35s var(--ease) forwards; }
 @keyframes sheet { from { opacity: 0; transform: translateX(60px) scale(.96); filter: blur(8px); } }
@@ -330,6 +334,16 @@ kbd { font: 600 10.5px -apple-system, sans-serif; color: var(--text-3); padding:
 .check path { fill: none; stroke: var(--low); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 20; stroke-dashoffset: 20; animation: draw .5s .1s var(--ease) forwards; }
 .result.bad .check circle { fill: rgba(255,107,99,.15); } .result.bad .check path { stroke: var(--high); }
 @keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* refine + result details */
+.refine-row { display: flex; gap: 8px; }
+.refine-row .field { flex: 1; height: 36px; }
+.link { font-size: 12px; font-weight: 600; color: var(--a1); text-transform: none; letter-spacing: 0; }
+.link:hover { text-decoration: underline; }
+.result-msg { flex: 1; display: grid; gap: 8px; min-width: 0; }
+.result-msg b { font-size: 13.5px; line-height: 1.45; font-weight: 600; }
+.result-msg .btn { justify-self: start; }
+.limited { font-size: 12.5px; color: var(--med); background: rgba(251,191,74,.1); box-shadow: inset 0 0 0 1px rgba(251,191,74,.3); padding: 10px 12px; border-radius: 12px; line-height: 1.45; }
 
 /* ---------- settings ---------- */
 .modal { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: var(--scrim); backdrop-filter: blur(12px); animation: fade .3s both; }

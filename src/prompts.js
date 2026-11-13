@@ -14,12 +14,15 @@ Hard rules, never broken:
 
 Make the ideas feel like small magic: specific, personal and immediately useful, not generic. Plain, friendly English for everything the person reads.`;
 
+// How an app is described to Claude: name, bundle id, and whether it has an AppleScript dictionary.
+const label = (x) => `"${x.name}" (${x.id}${x.scriptable === true ? ', has an AppleScript dictionary' : x.scriptable === false ? ', no AppleScript dictionary: use open -a, URL schemes, shortcuts or UI-free shell tools' : ''})`;
+
 const ideasPrompt = (a, b) => [SYSTEM,
-  `Fuse these two apps: "${a.name}" (${a.id}) and "${b.name}" (${b.id}).
+  `Fuse these two apps: ${label(a)} and ${label(b)}.
 Give 3 different automation ideas that use both apps and can run right now as one script. Order them from most delightful to most practical.`];
 
 const buildPrompt = (a, b, idea) => [SYSTEM,
-  `Fuse "${a.name}" (${a.id}) and "${b.name}" (${b.id}) into this automation:
+  `Fuse ${label(a)} and ${label(b)} into this automation:
 Title: ${idea.title}
 What it does: ${idea.description}
 
@@ -70,4 +73,19 @@ ${plan.script}
 
 Fix the script so it compiles and still does the same thing. Return the whole automation again.`];
 
-module.exports = { ideasPrompt, buildPrompt, fixPrompt, IDEAS_SCHEMA, BUILD_SCHEMA, SYSTEM };
+// Refine: the person describes a change in plain English; return the whole automation again.
+const refinePrompt = (a, b, plan, instruction) => [SYSTEM,
+  `This automation fuses ${label(a)} and ${label(b)}.
+
+Current version:
+Name: ${plan.name}
+Steps:
+${plan.steps.map((x, i) => `${i + 1}. ${x}`).join('\n')}
+Script (${plan.language}):
+${plan.script}
+
+The person wants this change: ${instruction}
+
+Make that change and keep everything else that still makes sense. Keep the same name unless the change makes it wrong. Return the whole automation again, with steps, risk, permissions and undo updated to match the new script.`];
+
+module.exports = { ideasPrompt, buildPrompt, fixPrompt, refinePrompt, label, IDEAS_SCHEMA, BUILD_SCHEMA, SYSTEM };

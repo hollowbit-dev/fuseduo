@@ -53,6 +53,7 @@ npm start
 | `src/apps.js` | Finds installed apps, their icons, colours and categories |
 | `src/prompts.js` | The prompts and JSON schemas for ideas and builds |
 | `src/guard.js` | The safety block-list |
+| `scripts/ui-test.cjs`, `scripts/refine-test.cjs` | Mock-mode UI tests (Playwright) |
 | `src/renderer/` | The board, drag physics, fusion animation and panel |
 
-© Hollowbit Studio. All rights reserved.
+MIT licence. © 2026 Hollowbit Studio.

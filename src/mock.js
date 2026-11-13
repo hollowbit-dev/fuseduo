@@ -10,6 +10,10 @@ module.exports = {
       { title: 'Focus mode in one click', description: `Hides every other app and leaves just ${a.name} and ${b.name} on screen.` },
     ] };
   },
+  async refine(a, b, plan, instruction) {
+    await wait(600);
+    return { ...plan, steps: [...plan.steps, `Also: ${instruction}`], script: `${plan.script}\n-- refined: ${instruction.replace(/[\r\n]/g, ' ')}` };
+  },
   async build(a, b, idea) {
     await wait(700);
     return {

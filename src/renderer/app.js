@@ -537,43 +537,77 @@ async function showPlan() {
   const sum = el('summary'); const h = el('h3'); h.append(el('span', 'chev', '›'), 'The script', el('span', 'grow'), (n => `${n} line${n === 1 ? '' : 's'}`)(String(plan.script).split('\n').length));
   sum.append(h); code.append(sum, codeBlock(plan.script, plan.language));
 
+  // Refine: describe a change in plain English and Claude rebuilds the script (one step of undo).
+  const refine = el('form', 'refine sec'); refine.style.animationDelay = '220ms';
+  const rh = el('h3'); rh.append('Change something');
+  if (current.previous) { const u = el('button', 'link', 'Undo last change'); u.type = 'button'; u.onclick = () => { current.plan = current.previous; current.previous = null; current.dirty = true; showPlan(); }; rh.append(el('span', 'grow'), u); }
+  const rf = el('label', 'field'); const ri = el('input'); ri.placeholder = 'e.g. “also include tomorrow” or “make the note title shorter”'; rf.append(ri);
+  const rb = el('button', 'btn btn-quiet', 'Refine'); const rrow = el('div', 'refine-row'); rrow.append(rf, rb);
+  refine.append(rh, rrow);
+  refine.onsubmit = (e) => { e.preventDefault(); const t = ri.value.trim(); if (t) refineFusion(t); };
+
   const out = el('div', 'result'); out.hidden = true;
-  body().replaceChildren(what, safety, code, out);
+  body().replaceChildren(what, safety, code, refine, out);
 
   const verdict = await window.fuse.check({ language: plan.language, script: plan.script });
   const run = el('button', 'btn btn-primary'); run.append(svgEl(ICON.play), 'Approve and run');
-  const saved = FUSIONS.some((f) => f.id === current.fusionId);
-  const save = el('button', 'btn btn-quiet', saved ? 'Saved ✓' : 'Save'); save.disabled = saved;
+  const isSaved = () => FUSIONS.some((f) => f.id === current.fusionId);
+  const save = el('button', 'btn btn-quiet');
+  const syncSave = () => { const saved = isSaved(); save.textContent = saved ? (current.dirty ? 'Save changes' : 'Saved ✓') : 'Save'; save.disabled = saved && !current.dirty; };
+  syncSave();
   const back = el('button', 'btn btn-quiet', current.ideas ? 'Other ideas' : 'Close');
   foot([back, save, run]);
   const blocked = !verdict.data?.ok ? `Blocked for safety: ${verdict.data?.reason || verdict.error}` : plan.compileError ? `This script doesn’t compile, so it won’t run:\n${plan.compileError}` : null;
-  const showResult = (ok, text) => {
+  const showResult = (ok, text, why) => {
     out.hidden = false; out.className = `result ${ok ? 'ok' : 'bad'}`;
-    out.replaceChildren(checkIcon(), el('pre', '', text));
+    const msg = el('div', 'result-msg');
+    if (why) msg.append(el('b', '', why.text));
+    if (text) msg.append(el('pre', '', text));
+    if (why?.kind === 'automation') { const fix = el('button', 'btn btn-quiet sm', 'Open Automation settings'); fix.onclick = () => window.fuse.openAutomation(); msg.append(fix); }
+    out.replaceChildren(checkIcon(), msg);
     if (!ok) $('path', out).setAttribute('d', 'M8 8l8 8M16 8l-8 8');
     out.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
   if (blocked) { run.disabled = true; showResult(false, blocked); }
+  let runningNow = false;
   run.onclick = async () => {
-    run.classList.add('busy'); run.lastChild.textContent = 'Running…';
+    if (runningNow) { window.fuse.stop(current.fusionId); return; } // the button is Stop while a script runs
+    runningNow = true; run.classList.add('busy'); run.lastChild.textContent = 'Stop';
     setStep('run');
-    const id = FUSIONS.some((f) => f.id === current.fusionId) ? current.fusionId : undefined;
-    const r = await window.fuse.run({ language: plan.language, script: plan.script, id });
+    const r = await window.fuse.run({ language: plan.language, script: plan.script, id: current.fusionId });
+    runningNow = false;
     const res = r.ok ? r.data : { ok: false, output: r.error };
     setStep('run', res.ok);
-    showResult(res.ok, (res.output || '').trim() || (res.ok ? 'Done.' : 'It failed without a message.'));
+    const text = (res.output || '').trim();
+    showResult(res.ok, text || (res.ok ? 'Done.' : res.why ? '' : 'It failed without a message.'), res.why);
     if (res.ok) { const c = center(run); burst(c.x, c.y - 10, ['#4ade80', '#ffffff', vivid(a.color)], 34); }
     run.classList.remove('busy'); run.lastChild.textContent = 'Run again';
-    if (id) refreshShelf();
+    if (isSaved()) refreshShelf();
   };
   save.onclick = async () => {
-    const f = { id: current.fusionId, a: pick(a), b: pick(b), idea: current.idea, plan, savedAt: new Date().toISOString() };
+    const f = { id: current.fusionId, a: pick(a), b: pick(b), idea: current.idea, plan: current.plan, savedAt: new Date().toISOString() };
+    const old = FUSIONS.find((x) => x.id === f.id); if (old) Object.assign(f, { lastRun: old.lastRun, runs: old.runs, savedAt: old.savedAt, editedAt: new Date().toISOString() });
     const r = await window.fuse.saveFusion(f);
-    if (r.ok) { FUSIONS = r.data; renderShelf(f.id); save.textContent = 'Saved ✓'; save.disabled = true; toast('Saved to Your fusions.'); }
+    if (r.ok) { FUSIONS = r.data; renderShelf(f.id); const was = current.dirty; current.dirty = false; syncSave(); toast(was ? 'Changes saved.' : 'Saved to Your fusions.'); }
   };
   back.onclick = () => (current.ideas ? showIdeas() : closePanel());
 }
-const pick = (x) => ({ id: x.id, name: x.name, icon: x.icon, color: x.color });
+async function refineFusion(instruction) {
+  const mine = current, before = current.plan;
+  setTitle(`Refining ${before.name}`);
+  setStep('build');
+  body().replaceChildren(el('div', 'ghostcard tall'), el('div', 'ghostcard'));
+  foot(null);
+  busy(true, STAGES.writing);
+  const r = await window.fuse.refine(current.a, current.b, before, instruction);
+  if (current !== mine) return;
+  if (!r.ok) return showError(r.error, () => refineFusion(instruction));
+  current.previous = before; current.plan = r.data; current.dirty = true;
+  busy(false);
+  showPlan();
+  toast('Updated. Read the new steps before you run it.');
+}
+const pick = (x) => ({ id: x.id, name: x.name, icon: x.icon, color: x.color, scriptable: x.scriptable });
 
 // ---------- fusions shelf ----------
 function ago(iso) {
@@ -611,7 +645,7 @@ function renderShelf(fresh) {
       play.classList.add('spin'); st.className = 'fstatus running'; st.replaceChildren(el('span', 'dot'), 'Running…');
       const r = await window.fuse.run({ language: f.plan.language, script: f.plan.script, id: f.id });
       const res = r.ok ? r.data : { ok: false, output: r.error };
-      toast(res.ok ? `${f.plan.name}: done.` : `${f.plan.name} failed. Open it to see why.`, res.ok);
+      toast(res.ok ? `${f.plan.name}: done.` : res.why ? res.why.text : `${f.plan.name} failed. Open it to see why.`, res.ok);
       if (res.ok) { const p = center(play); burst(p.x, p.y, ['#4ade80', '#ffffff'], 24); }
       refreshShelf();
     };
@@ -696,7 +730,7 @@ let LOADING = true;
   if (apps.ok && apps.data.cached) {
     window.fuse.refreshApps().then((r) => {
       if (!r.ok) return;
-      const sig = (l) => l.map((x) => x.id + x.icon).join();
+      const sig = (l) => l.map((x) => x.id + x.icon + x.scriptable).join();
       if (sig(r.data) === sig(APPS)) return;
       APPS = r.data; $('#board').classList.add('calm'); renderNav(); if (!drag.on) renderBoard();
     });

@@ -107,7 +107,10 @@ async function listApps(cacheDir) {
     if (!info || !info.CFBundleIdentifier) return null;
     const name = info.CFBundleDisplayName || info.CFBundleName || path.basename(p, '.app');
     const icon = await iconFor(p, info, cacheDir, info.CFBundleIdentifier);
-    return { id: info.CFBundleIdentifier, name: path.basename(p, '.app') || name, path: p, icon: icon ? `file://${icon}` : null, system: p.startsWith('/System/'), category: category(info.LSApplicationCategoryType) };
+    // Scriptable = has an AppleScript dictionary (declared in Info.plist or an .sdef in Resources).
+    let scriptable = !!(info.NSAppleScriptEnabled || info.OSAScriptingDefinition);
+    if (!scriptable) { try { scriptable = fs.readdirSync(path.join(p, 'Contents', 'Resources')).some((f) => f.endsWith('.sdef')); } catch { /* unreadable */ } }
+    return { scriptable, id: info.CFBundleIdentifier, name: path.basename(p, '.app') || name, path: p, icon: icon ? `file://${icon}` : null, system: p.startsWith('/System/'), category: category(info.LSApplicationCategoryType) };
   });
   await flushNative();
   for (const a of apps) {

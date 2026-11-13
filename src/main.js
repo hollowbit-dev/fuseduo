@@ -7,7 +7,7 @@ const fs = require('fs');
 const { execFile, spawn } = require('child_process');
 const Anthropic = require('@anthropic-ai/sdk').default;
 const { listApps } = require('./apps');
-const { ideasPrompt, buildPrompt, fixPrompt, IDEAS_SCHEMA, BUILD_SCHEMA } = require('./prompts');
+const { ideasPrompt, buildPrompt, fixPrompt, refinePrompt, IDEAS_SCHEMA, BUILD_SCHEMA } = require('./prompts');
 const os = require('os');
 const { checkScript } = require('./guard');
 
@@ -158,11 +158,13 @@ function getIdeas(a, b, { fresh = false } = {}) {
   return p;
 }
 
-// Build: write the script, check it compiles, and let Claude fix it once if it doesn't.
-async function buildFusion(sender, a, b, idea) {
+// Build (or refine): write the script, check it compiles, and let Claude fix it once if it doesn't.
+async function buildFusion(sender, a, b, idea, refine) {
   const stage = (s) => { try { sender.send('fuse:stage', s); } catch { /* window closed */ } };
   stage('writing');
-  let plan = MOCK ? await MOCK.build(a, b, idea) : await ask(...buildPrompt(a, b, idea), BUILD_SCHEMA, 'low');
+  let plan;
+  if (refine) plan = MOCK ? await MOCK.refine(a, b, refine.plan, refine.instruction) : await ask(...refinePrompt(a, b, refine.plan, refine.instruction), BUILD_SCHEMA, 'low');
+  else plan = MOCK ? await MOCK.build(a, b, idea) : await ask(...buildPrompt(a, b, idea), BUILD_SCHEMA, 'low');
   stage('checking');
   let error = await compileCheck(plan);
   if (error && !MOCK) {
@@ -175,18 +177,35 @@ async function buildFusion(sender, a, b, idea) {
 }
 
 // ---------- running a script ----------
-function runScript({ language, script }) {
+// One script at a time per fusion id; Stop kills it. macOS errors are turned into plain English.
+const running = new Map();
+const OSA = [
+  [/-1743|Not authori[sz]ed to send Apple events to ([^.\n]+)/i, (m) => ({ kind: 'automation', app: (m[1] || '').trim(), text: `macOS blocked Fuseduo from controlling ${(m[1] || 'that app').trim()}. Allow it in System Settings › Privacy & Security › Automation, then run it again.` })],
+  [/-1712|AppleEvent timed out/i, () => ({ kind: 'timeout', text: 'The app took too long to answer. It may be busy or showing a dialog. Bring it to the front and try again.' })],
+  [/-600|Application isn.t running/i, () => ({ kind: 'not-running', text: 'One of the apps isn’t running and couldn’t be started. Open it once yourself, then try again.' })],
+  [/-1728|Can.t get /i, () => ({ kind: 'not-found', text: 'The script looked for something that isn’t there right now (an open window, a selected item, a playing song…). Set that up and run it again.' })],
+  [/-1708|doesn.t understand/i, () => ({ kind: 'unsupported', text: 'The app doesn’t support one of the commands this script uses. Try Refine and ask for another way to do it.' })],
+];
+function explain(output) { for (const [re, fn] of OSA) { const m = re.exec(output); if (m) return fn(m); } return null; }
+function runScript({ language, script, id }) {
   return new Promise((resolve) => {
     const verdict = checkScript(language, script);
     if (!verdict.ok) return resolve({ ok: false, output: `Blocked for safety: ${verdict.reason}` });
     const [cmd, args] = language === 'applescript' ? ['/usr/bin/osascript', ['-e', script]]
       : language === 'javascript' ? ['/usr/bin/osascript', ['-l', 'JavaScript', '-e', script]]
       : ['/bin/zsh', ['-c', script]];
-    execFile(cmd, args, { timeout: 60000, maxBuffer: 1 << 20 }, (err, stdout, stderr) => {
-      resolve({ ok: !err, output: (stdout || '') + (stderr ? `\n${stderr}` : '') + (err && !stderr ? `\n${err.message}` : '') });
+    const key = id || 'adhoc';
+    const child = execFile(cmd, args, { timeout: 120000, maxBuffer: 1 << 20 }, (err, stdout, stderr) => {
+      running.delete(key);
+      const output = (stdout || '') + (stderr ? `\n${stderr}` : '') + (err && !stderr ? `\n${err.message}` : '');
+      if (child.stopped) return resolve({ ok: false, stopped: true, output: 'Stopped.' });
+      if (err?.killed) return resolve({ ok: false, output, why: { kind: 'timeout', text: 'It ran for 2 minutes without finishing, so Fuseduo stopped it.' } });
+      resolve({ ok: !err, output, why: err ? explain(output) : null });
     });
+    running.set(key, child);
   });
 }
+function stopScript(id) { const c = running.get(id || 'adhoc'); if (!c) return false; c.stopped = true; c.kill('SIGTERM'); return true; }
 
 // ---------- IPC ----------
 // The app list is cached so the board shows instantly; a fresh scan follows in the background.
@@ -206,6 +225,11 @@ handle('fuse:ideas', (a, b, opts) => getIdeas(a, b, opts));
 ipcMain.handle('fuse:build', async (e, a, b, idea) => {
   try { return { ok: true, data: await buildFusion(e.sender, a, b, idea) }; } catch (err) { return { ok: false, error: friendlyError(err) }; }
 });
+ipcMain.handle('fuse:refine', async (e, a, b, plan, instruction) => {
+  try { return { ok: true, data: await buildFusion(e.sender, a, b, null, { plan, instruction }) }; } catch (err) { return { ok: false, error: friendlyError(err) }; }
+});
+handle('fuse:stop', (id) => stopScript(id));
+handle('open:automation', () => { shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Automation'); return true; });
 handle('fuse:check', (f) => checkScript(f.language, f.script));
 handle('fuse:run', async (f) => {
   const r = await runScript(f);
