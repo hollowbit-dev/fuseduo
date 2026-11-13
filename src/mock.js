@@ -4,6 +4,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 module.exports = {
   async ideas(a, b) {
     await wait(600);
+    if (process.env.FUSE_MOCK_LONG) return { ideas: [1, 2, 3].map((i) => ({ title: `A long idea title number ${i} for ${a.name}`, description: `When you press Run this reads what ${a.name} is doing right now, writes a dated summary into a brand-new note in ${b.name}, adds links back to everything it found and finishes by telling you exactly how many items it saved, so nothing is lost.` })) };
     return { ideas: [
       { title: `${a.name} + ${b.name} workspace`, description: `Opens ${a.name} and ${b.name} side by side, sized to fill your screen, ready to work.` },
       { title: 'Daily snapshot note', description: `Writes a short note with the date and what ${a.name} and ${b.name} are showing, so you can look back later.` },

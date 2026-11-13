@@ -66,11 +66,11 @@ svg { flex: none; }
 .aurora i, .grain { display: none; }
 
 /* ---------- layout ---------- */
-.shell { height: 100%; display: grid; grid-template-columns: 232px 1fr; }
-.main { min-width: 0; display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+.shell { height: 100%; display: grid; grid-template-columns: 232px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+.main { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; }
 
 /* ---------- sidebar ---------- */
-.side { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 0 12px 12px; background: var(--side); box-shadow: inset -1px 0 0 var(--line); }
+.side { position: relative; min-height: 0; display: flex; flex-direction: column; gap: 14px; padding: 0 12px 12px; background: var(--side); box-shadow: inset -1px 0 0 var(--line); }
 .side-drag { -webkit-app-region: drag; height: 50px; margin: 0 -12px -6px; flex: none; }
 .brand { display: flex; align-items: center; gap: 9px; padding: 0 6px; }
 .brand-icon { width: 30px; height: 30px; filter: drop-shadow(0 4px 10px rgba(108,92,255,.45)); }
@@ -134,7 +134,9 @@ kbd { font: 600 10.5px -apple-system, sans-serif; color: var(--text-3); padding:
 @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
 
 /* ---------- board ---------- */
-.board-wrap { overflow-y: auto; padding: 10px 22px 22px; position: relative; }
+.board-wrap { overflow-y: auto; padding: 10px 22px 22px; position: relative; transition: padding-right .45s var(--ease); }
+/* while the panel is open the board reflows into the space it leaves, so no app hides behind it */
+body.panel-open .board-wrap, body.panel-open .shelf { padding-right: calc(min(480px, 46vw) + 22px); }
 .board-wrap::-webkit-scrollbar { width: 0; }
 .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 4px; }
 .board-status { color: var(--text-3); font-size: 13.5px; display: flex; gap: 10px; justify-content: center; align-items: center; margin-top: 60px; }
@@ -271,7 +273,7 @@ kbd { font: 600 10.5px -apple-system, sans-serif; color: var(--text-3); padding:
 .stepper li.done, .stepper li.now { color: var(--text-2); }
 .stepper li.now { color: var(--text); }
 .stepper-fill { position: absolute; left: 0; top: 0; height: 3px; border-radius: 3px; background: var(--grad); width: calc(var(--p, 0) * 100%); transition: width .8s var(--spring-soft); box-shadow: 0 0 10px color-mix(in srgb, var(--a1) 60%, transparent); }
-.panel-body { flex: 1; overflow-y: auto; padding: 16px 24px 24px; display: grid; gap: 12px; align-content: start; }
+.panel-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 24px 24px; display: grid; grid-auto-rows: max-content; gap: 12px; align-content: start; }
 .panel-body::-webkit-scrollbar { width: 0; }
 .panel-foot { display: flex; gap: 8px; align-items: center; padding: 14px 24px 18px; border-top: 1px solid var(--line); background: linear-gradient(transparent, color-mix(in srgb, var(--bg) 30%, transparent)); animation: rise .5s var(--spring-soft) both; }
 .panel-foot .btn-primary { flex: 1; }

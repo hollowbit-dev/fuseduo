@@ -8,3 +8,4 @@ scripts/data-*/
 *.log
 scripts/apps-out/
 scripts/perm.png
+scripts/ovf.png

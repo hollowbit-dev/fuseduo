@@ -385,12 +385,13 @@ function openPanel(a, b, title) {
   $('#pPair').textContent = `${a.name} + ${b.name}`;
   setTitle(title);
   foot(null);
-  p.hidden = false;
+  p.hidden = false; document.body.classList.add('panel-open');
 }
 async function closePanel() {
   const p = $('#panel');
   if (p.hidden) return;
   current = null;
+  document.body.classList.remove('panel-open');
   p.classList.add('closing'); await wait(330); p.hidden = true; p.classList.remove('closing', 'busy');
 }
 function busy(on, text) { $('#panel').classList.toggle('busy', on); setStage(text || ''); }

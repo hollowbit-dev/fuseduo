@@ -8,7 +8,7 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node --test test/ && node scripts/ui-test.cjs dark && node scripts/refine-test.cjs && node scripts/quick-test.cjs && node scripts/app-test.cjs",
+    "test": "node --test test/ && node scripts/ui-test.cjs dark && node scripts/refine-test.cjs && node scripts/quick-test.cjs && node scripts/app-test.cjs && node scripts/overflow-test.cjs",
     "test:unit": "node --test test/",
     "dist": "electron-builder --mac --publish never",
     "icon": "swift scripts/make-icon.swift assets/icon.png"
