@@ -345,6 +345,23 @@ kbd { font: 600 10.5px -apple-system, sans-serif; color: var(--text-3); padding:
 .result-msg .btn { justify-self: start; }
 .limited { font-size: 12.5px; color: var(--med); background: rgba(251,191,74,.1); box-shadow: inset 0 0 0 1px rgba(251,191,74,.3); padding: 10px 12px; border-radius: 12px; line-height: 1.45; }
 
+/* quick fuse */
+.quick-btn { display: flex; align-items: center; gap: 9px; height: 34px; padding: 0 8px 0 11px; border-radius: 11px; font-size: 13px; font-weight: 600; color: #fff; background: var(--grad); box-shadow: 0 6px 18px rgba(108,92,255,.3), inset 0 1px 0 rgba(255,255,255,.35); transition: transform .4s var(--spring); }
+.quick-btn:hover { transform: translateY(-1px); } .quick-btn:active { transform: scale(.97); }
+.quick-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.quick-btn span { flex: 1; text-align: left; }
+.quick-btn kbd { background: rgba(255,255,255,.2); color: #fff; }
+.quick { place-items: start center; padding-top: 14vh; }
+.quick-card { width: min(520px, 90vw); padding: 14px; border-radius: 20px; background: var(--sheet); box-shadow: var(--glass-rim), 0 30px 80px rgba(0,0,0,.45); animation: rise .45s var(--spring) both; -webkit-app-region: no-drag; }
+.quick-step { font-size: 12px; font-weight: 650; color: var(--text-3); padding: 2px 6px 10px; }
+.quick-field { height: 44px; } .quick-field input { font-size: 15px; }
+.quick-list { display: grid; gap: 2px; margin-top: 8px; }
+.qrow { display: flex; align-items: center; gap: 12px; padding: 7px 10px; border-radius: 11px; text-align: left; font-size: 14px; }
+.qrow img, .qrow .ph { width: 30px; height: 30px; border-radius: 8px; }
+.qrow span { flex: 1; } .qrow em { font-style: normal; font-size: 11px; color: var(--med); }
+.qrow.on { background: var(--chip-2); box-shadow: var(--glass-rim); }
+.quick-hint { font-size: 11.5px; color: var(--text-3); padding: 10px 6px 2px; }
+
 /* ---------- settings ---------- */
 .modal { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: var(--scrim); backdrop-filter: blur(12px); animation: fade .3s both; }
 @keyframes fade { from { opacity: 0; } }

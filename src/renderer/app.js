@@ -68,7 +68,7 @@ function iconEl(app, cls = '') {
   const img = el('img', cls); img.src = app.icon; img.alt = ''; img.draggable = false; return img;
 }
 function tileFor(app, i) {
-  const t = el('div', 'tile'); t.dataset.id = app.id; t.title = app.name;
+  const t = el('div', 'tile'); t.dataset.id = app.id; t.title = app.scriptable === false ? `${app.name} (limited automation: no AppleScript dictionary)` : app.name;
   t.style.setProperty('--c', app.color); t.style.animationDelay = `${Math.min(i, 30) * 14}ms`;
   const star = el('button', `star${PREFS.favourites.includes(app.id) ? ' on' : ''}`); star.title = 'Favourite'; star.setAttribute('aria-label', `Favourite ${app.name}`);
   star.append(svgEl(ICON.star));
@@ -458,7 +458,9 @@ function showIdeas() {
   const field = el('label', 'field'); const input = el('input'); input.placeholder = 'Or describe your own…'; field.append(input);
   custom.append(field, el('button', 'btn btn-quiet', 'Build'));
   custom.onsubmit = (e) => { e.preventDefault(); const t = input.value.trim(); if (t) build({ title: t, description: t }); };
-  body().replaceChildren(...nodes, custom);
+  const limitedApps = [current.a, current.b].filter((x) => x.scriptable === false).map((x) => x.name);
+  const note = limitedApps.length ? el('p', 'limited', `${limitedApps.join(' and ')} ${limitedApps.length > 1 ? 'have' : 'has'} limited automation support on macOS, so ideas use opening, links and Shortcuts rather than full control.`) : null;
+  body().replaceChildren(...(note ? [note] : []), ...nodes, custom);
   const more = el('button', 'btn btn-quiet', 'More ideas'); more.onclick = moreIdeas;
   foot([more]);
 }
@@ -696,10 +698,48 @@ $('#panelClose').onclick = closePanel;
 $('#search').oninput = () => { renderNav(); renderBoard(true); };
 $('#nav').addEventListener('click', (e) => { const n = e.target.closest('.nav-item'); if (n) setView(n.dataset.view); });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { if (!$('#modal').hidden) $('#modal').hidden = true; else if ($('#search').value && document.activeElement === $('#search')) { $('#search').value = ''; $('#search').oninput(); } else closePanel(); }
+  if (e.key === 'Escape') { if (!$('#quick').hidden) closeQuick(); else if (!$('#modal').hidden) $('#modal').hidden = true; else if ($('#search').value && document.activeElement === $('#search')) { $('#search').value = ''; $('#search').oninput(); } else closePanel(); }
   if ((e.metaKey || e.ctrlKey) && e.key === 'f') { e.preventDefault(); $('#search').focus(); }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); $('#quick').hidden ? openQuick() : closeQuick(); }
+  if ((e.metaKey || e.ctrlKey) && e.key === ',') { e.preventDefault(); openSettings(); }
 });
 addEventListener('resize', movePill);
+
+// ---------- quick fuse (⌘K): pick two apps from the keyboard ----------
+const qf = { first: null, sel: 0, list: [] };
+function openQuick() {
+  if (drag.on) return;
+  qf.first = null; qf.sel = 0;
+  $('#quick').hidden = false; $('#quickInput').value = ''; $('#quickInput').focus(); renderQuick();
+}
+function closeQuick() { $('#quick').hidden = true; }
+function renderQuick() {
+  const q = $('#quickInput').value.trim().toLowerCase();
+  const pool = q ? APPS.filter((a) => a.name.toLowerCase().includes(q)) : [...PREFS.favourites.map(byId), ...PREFS.recent.map(byId), ...APPS].filter((a, i, l) => a && l.indexOf(a) === i);
+  qf.list = pool.filter((a) => a !== qf.first).slice(0, 8);
+  qf.sel = Math.min(qf.sel, Math.max(0, qf.list.length - 1));
+  $('#quickStep').textContent = qf.first ? `Fuse ${qf.first.name} with…` : 'Pick the first app';
+  $('#quickList').replaceChildren(...qf.list.map((a, i) => {
+    const row = el('button', `qrow${i === qf.sel ? ' on' : ''}`); row.append(iconEl(a), el('span', '', a.name));
+    if (a.scriptable === false) row.append(el('em', '', 'limited'));
+    row.onclick = () => pickQuick(a); row.onmousemove = () => { if (qf.sel !== i) { qf.sel = i; renderQuick(); } };
+    return row;
+  }));
+}
+function pickQuick(a) {
+  if (!a) return;
+  if (!qf.first) { qf.first = a; $('#quickInput').value = ''; qf.sel = 0; renderQuick(); $('#quickInput').focus(); return; }
+  const first = qf.first; closeQuick(); fuseApps(first, a);
+}
+$('#quickInput').addEventListener('input', () => { qf.sel = 0; renderQuick(); });
+$('#quickInput').addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); qf.sel = Math.min(qf.list.length - 1, qf.sel + 1); renderQuick(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); qf.sel = Math.max(0, qf.sel - 1); renderQuick(); }
+  else if (e.key === 'Enter') { e.preventDefault(); pickQuick(qf.list[qf.sel]); }
+  else if (e.key === 'Backspace' && !e.target.value && qf.first) { qf.first = null; renderQuick(); }
+});
+$('#quick').addEventListener('click', (e) => { if (e.target.id === 'quick') closeQuick(); });
+$('#quickBtn').onclick = openQuick;
 
 // ---------- first launch ----------
 function showWelcome() {
@@ -741,6 +781,14 @@ let LOADING = true;
   FUSIONS = fusions.ok ? fusions.data : [];
   renderShelf();
   if (!PREFS.onboarded) showWelcome();
+  // a newer release on GitHub? say so once, quietly
+  const [u, v] = await Promise.all([window.fuse.checkUpdate(), window.fuse.version()]);
+  const newer = (x, y) => { const p = (s) => String(s).split('.').map(Number); const [a, b] = [p(x), p(y)]; for (let i = 0; i < 3; i++) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0); return false; };
+  if (u.ok && u.data && v.ok && newer(u.data, v.data)) {
+    const t = $('#toast'); toast(`Fuseduo ${u.data} is out.`, true);
+    const b = el('button', 'btn btn-quiet sm', 'Get it'); b.onclick = () => window.fuse.openUrl('https://hollowbit.dev/fuseduo/'); t.append(b);
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 9000);
+  }
 })();
 
 // test hook: fuse two apps by bundle id without dragging

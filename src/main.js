@@ -179,14 +179,7 @@ async function buildFusion(sender, a, b, idea, refine) {
 // ---------- running a script ----------
 // One script at a time per fusion id; Stop kills it. macOS errors are turned into plain English.
 const running = new Map();
-const OSA = [
-  [/-1743|Not authori[sz]ed to send Apple events to ([^.\n]+)/i, (m) => ({ kind: 'automation', app: (m[1] || '').trim(), text: `macOS blocked Fuseduo from controlling ${(m[1] || 'that app').trim()}. Allow it in System Settings › Privacy & Security › Automation, then run it again.` })],
-  [/-1712|AppleEvent timed out/i, () => ({ kind: 'timeout', text: 'The app took too long to answer. It may be busy or showing a dialog. Bring it to the front and try again.' })],
-  [/-600|Application isn.t running/i, () => ({ kind: 'not-running', text: 'One of the apps isn’t running and couldn’t be started. Open it once yourself, then try again.' })],
-  [/-1728|Can.t get /i, () => ({ kind: 'not-found', text: 'The script looked for something that isn’t there right now (an open window, a selected item, a playing song…). Set that up and run it again.' })],
-  [/-1708|doesn.t understand/i, () => ({ kind: 'unsupported', text: 'The app doesn’t support one of the commands this script uses. Try Refine and ask for another way to do it.' })],
-];
-function explain(output) { for (const [re, fn] of OSA) { const m = re.exec(output); if (m) return fn(m); } return null; }
+const { explain } = require('./explain');
 function runScript({ language, script, id }) {
   return new Promise((resolve) => {
     const verdict = checkScript(language, script);
@@ -248,6 +241,19 @@ handle('fusions:save', (f) => {
   all.unshift(f); writeJson('fusions.json', all); return all;
 });
 handle('fusions:delete', (id) => { const all = readJson('fusions.json', []).filter((x) => x.id !== id); writeJson('fusions.json', all); return all; });
+// Once a day: ask GitHub for the newest release tag. Nothing about the user is sent.
+handle('update:check', async () => {
+  const cfg = readJson('config.json', {});
+  if (cfg.updates === false || MOCK) return null;
+  if (cfg.lastUpdateCheck && Date.now() - cfg.lastUpdateCheck < 864e5) return cfg.latest || null;
+  try {
+    const r = await fetch('https://api.github.com/repos/hollowbit-dev/fuseduo/releases/latest', { headers: { 'User-Agent': 'Fuseduo' } });
+    const latest = r.ok ? (await r.json()).tag_name?.replace(/^v/, '') : null;
+    writeJson('config.json', { ...readJson('config.json', {}), lastUpdateCheck: Date.now(), latest });
+    return latest;
+  } catch { return null; }
+});
+handle('app:version', () => app.getVersion());
 handle('open:url', (url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return true; });
 
 // ---------- window ----------

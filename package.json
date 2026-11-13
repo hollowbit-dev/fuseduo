@@ -7,10 +7,52 @@
   "description": "Fuseduo: drag one app onto another and Claude builds a real automation.",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "test": "node --test test/ && node scripts/ui-test.cjs dark && node scripts/refine-test.cjs && node scripts/quick-test.cjs",
+    "test:unit": "node --test test/",
+    "dist": "electron-builder --mac --publish never",
+    "icon": "swift scripts/make-icon.swift assets/icon.png"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "1.8.0",
+    "@anthropic-ai/sdk": "1.8.0"
+  },
+  "build": {
+    "appId": "dev.hollowbit.fuseduo",
+    "productName": "Fuseduo",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/icon.png",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.png",
+      "identity": null,
+      "artifactName": "Fuseduo-${version}-mac-${arch}.${ext}",
+      "extendInfo": {
+        "NSAppleEventsUsageDescription": "Fuseduo runs the automations you approve, which control the apps you fused (for example Notes or Calendar).",
+        "NSDesktopFolderUsageDescription": "Some fusions save new files to a Fusions folder on your Desktop."
+      }
+    },
+    "dmg": {
+      "title": "Fuseduo ${version}"
+    },
+    "afterPack": "scripts/after-pack.js"
+  },
+  "devDependencies": {
+    "electron-builder": "^25.1.8",
     "electron": "33.4.11"
   }
 }

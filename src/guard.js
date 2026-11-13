@@ -17,7 +17,8 @@ const RULES = [
   [/\.delete\(\)|\bdelete\(/, 'it deletes things (JavaScript delete)'],
   [/\bempty\s+(the\s+)?trash\b/i, 'it empties the Trash'],
   [/\bsend\s+(it|the\s+message|theMessage|msg|newMessage)\b|\bsend\s+(message|email)/i, 'it sends a message on your behalf'],
-  [/do\s+shell\s+script\s+"[^"]*with\s+administrator/i, 'it asks for administrator rights'],
+  [/do\s+shell\s+script\b[^\n]*\bwith\s+administrator/i, 'it asks for administrator rights'],
+  [/\badministrator\s+privileges\b/i, 'it asks for administrator rights'],
   [/\b(Login\s+Data|Cookies|keychain-db|\.ssh\/)\b/i, 'it reads private browser or key data'],
 ];
 

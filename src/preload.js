@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld('fuse', {
   saveFusion: call('fusions:save'),
   deleteFusion: call('fusions:delete'),
   openUrl: call('open:url'),
+  checkUpdate: call('update:check'),
+  version: call('app:version'),
   prefs: call('prefs:get'),
   setPrefs: call('prefs:set'),
 });

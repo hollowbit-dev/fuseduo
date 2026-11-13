@@ -21,6 +21,7 @@
   <nav class="side" aria-label="Library">
     <div class="side-drag"></div>
     <div class="brand"><img class="brand-icon" src="../../assets/icon.png" alt=""><span class="word">Fuseduo</span></div>
+    <button class="quick-btn" id="quickBtn" title="Fuse two apps from the keyboard"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg><span>Quick fuse</span><kbd>⌘K</kbd></button>
     <label class="search field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><input id="search" type="search" placeholder="Search apps" autocomplete="off" spellcheck="false"><kbd>⌘F</kbd></label>
     <div class="nav" id="nav">
       <span class="nav-pill" aria-hidden="true"></span>
@@ -127,6 +128,15 @@
     </ol>
     <div class="welcome-conn" id="welcomeConn"></div>
     <button class="btn btn-primary lg" id="welcomeGo">Start fusing</button>
+  </div>
+</div>
+
+<div id="quick" class="modal quick" hidden>
+  <div class="quick-card">
+    <p class="quick-step" id="quickStep"></p>
+    <label class="field quick-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><input id="quickInput" placeholder="Type an app name" autocomplete="off" spellcheck="false"></label>
+    <div class="quick-list" id="quickList"></div>
+    <p class="quick-hint">↑↓ to choose · Enter to pick · Esc to close</p>
   </div>
 </div>
 
