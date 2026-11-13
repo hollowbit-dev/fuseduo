@@ -544,3 +544,11 @@ dialog.film[open] { animation: filmIn .5s var(--spring-soft); }
 /* sister apps */
 .sisters .sister { text-decoration: none; color: inherit; display: block; }
 .sisters .sister h3 { margin-bottom: 6px; }
+
+/* "by Hollowbit": the studio behind Fuseduo */
+.by-hb { font-size: 12px; font-weight: 560; color: var(--text-3); text-decoration: none; margin-left: -2px; padding: 3px 9px; border-radius: 99px; border: 1px solid rgba(255,255,255,.09); transition: color .2s, border-color .2s; white-space: nowrap; }
+.by-hb:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
+.studio-card { display: grid; justify-items: start; gap: 12px; padding: clamp(28px, 5vw, 48px); text-decoration: none; color: inherit; }
+.studio-card h2 { margin: 0; }
+.studio-card .lede { margin: 0; max-width: 560px; }
+@media (max-width: 640px) { .by-hb { display: none; } }
