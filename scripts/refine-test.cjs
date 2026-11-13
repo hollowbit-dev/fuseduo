@@ -6,7 +6,7 @@ const { _electron: electron } = require(process.env.HOME + '/.claude/skills/play
   const app = await electron.launch({ args: [dir], cwd: dir, env: { ...process.env, FUSE_MOCK: '1', FUSE_DATA_DIR: data } });
   const win = await app.firstWindow(); const errs = [];
   win.on('pageerror', (e) => errs.push(e.message));
-  await win.waitForSelector('#welcomeGo'); await win.click('#welcomeGo'); await win.waitForTimeout(600);
+  await win.waitForSelector('#welcomeGo'); await win.click('#welcomeGo'); await win.click('#permSkip'); await win.waitForTimeout(600);
   await win.evaluate(() => window.__fuseTest('com.apple.Notes', 'com.apple.iCal'));
   await win.waitForSelector('.idea', { timeout: 20000 }); await win.click('.idea');
   await win.waitForSelector('.refine'); const steps0 = await win.$$eval('.steps li', (x) => x.length);

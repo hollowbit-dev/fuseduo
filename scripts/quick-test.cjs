@@ -5,7 +5,7 @@ const { _electron: electron } = require(process.env.HOME + '/.claude/skills/play
   require('fs').rmSync(data, { recursive: true, force: true });
   const app = await electron.launch({ args: [dir], cwd: dir, env: { ...process.env, FUSE_MOCK: '1', FUSE_DATA_DIR: data } });
   const win = await app.firstWindow(); const errs = []; win.on('pageerror', (e) => errs.push(e.message));
-  await win.waitForSelector('#welcomeGo'); await win.click('#welcomeGo'); await win.waitForSelector('.tile'); await win.waitForTimeout(800);
+  await win.waitForSelector('#welcomeGo'); await win.click('#welcomeGo'); await win.click('#permSkip'); await win.waitForSelector('.tile'); await win.waitForTimeout(800);
   await win.keyboard.press('Meta+k'); await win.waitForTimeout(300);
   await win.keyboard.type('saf'); await win.waitForTimeout(150);
   console.log('step 1:', await win.textContent('#quickStep'), '| top:', await win.textContent('.qrow.on span'));

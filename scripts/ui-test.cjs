@@ -11,7 +11,7 @@ const scheme = process.argv[2] || 'dark';
   await win.emulateMedia({ colorScheme: scheme });
   await win.waitForSelector('.welcome:not([hidden])', { timeout: 60000 }); await win.waitForTimeout(2700);
   await win.screenshot({ path: S + scheme + '-1-welcome.png' });
-  await win.click('#welcomeGo'); await win.waitForTimeout(1200);
+  await win.click('#welcomeGo'); await win.click('#permSkip'); await win.waitForTimeout(1200);
   await win.screenshot({ path: S + scheme + '-2-favourites.png' });
   console.log('fav tiles:', await win.$$eval('.tile', (t) => t.map((x) => x.dataset.id)));
   if (scheme !== 'dark') { await win.click('[data-view="all"]'); await win.waitForTimeout(900); await win.screenshot({ path: S + scheme + '-3-all.png' }); }
