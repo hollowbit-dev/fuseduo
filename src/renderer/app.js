@@ -125,6 +125,7 @@ function remember(a, b) {
 }
 // the light on a glass surface follows the pointer
 document.addEventListener('pointermove', (e) => {
+  if (drag.on) return; // no hover light mid-drag: it repainted every tile the icon passed over
   const t = e.target.closest?.('.tile, .idea');
   if (!t) return;
   const r = t.getBoundingClientRect();
@@ -145,7 +146,7 @@ function startDrag(e, tile, app) {
   const move = (ev) => {
     drag.px = ev.clientX; drag.py = ev.clientY;
     if (!drag.on && Math.hypot(ev.clientX - drag.sx, ev.clientY - drag.sy) > 5) beginDrag();
-    if (drag.on && !drag.returning) { findTarget(); springLoad(); }
+    drag.moved = true; // hit-testing happens once per frame in step()
   };
   const up = () => {
     removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
@@ -169,7 +170,7 @@ function beginDrag() {
   $('img', ghost).src = drag.app.icon || '';
   ghost.style.setProperty('--c', vividHex(drag.app.color));
   ghost.hidden = false;
-  setHint(`Drop ${drag.app.name} onto another app.`, true);
+  drag.hint = ''; drag.moved = true;
   requestAnimationFrame(step);
 }
 function dissolveGhost() {
@@ -177,11 +178,11 @@ function dissolveGhost() {
   ghost.animate([{ opacity: 1 }, { opacity: 0, transform: `${ghost.style.transform} scale(.4)` }], { duration: 260, easing: 'ease-in' }).finished.then(() => { ghost.hidden = true; });
   resetHint();
 }
-function findTarget() {
-  const under = document.elementsFromPoint(drag.px, drag.py).find((n) => n.classList?.contains('tile') && n.dataset.id !== drag.app.id);
+function findTarget(stack = document.elementsFromPoint(drag.px, drag.py)) {
+  const under = stack.find((n) => n.classList?.contains('tile') && n.dataset.id !== drag.app.id);
   setTarget(under || null);
-  if (under) setHint(`Fuse ${drag.app.name} with ${byId(under.dataset.id)?.name}`, true);
-  else setHint(`Drop ${drag.app.name} onto another app.`, true);
+  const hint = under ? `Fuse ${drag.app.name} with ${byId(under.dataset.id)?.name}` : `Drop ${drag.app.name} onto another app.`;
+  if (hint !== drag.hint) { drag.hint = hint; setHint(hint, true); }
 }
 function setTarget(t) {
   if (drag.target === t) return;
@@ -196,8 +197,8 @@ function setTarget(t) {
   }
 }
 // Hover a sidebar shelf while dragging and it opens, like spring-loaded folders in Finder.
-function springLoad() {
-  const item = document.elementsFromPoint(drag.px, drag.py).find((n) => n.classList?.contains('nav-item'));
+function springLoad(stack = document.elementsFromPoint(drag.px, drag.py)) {
+  const item = stack.find((n) => n.classList?.contains('nav-item'));
   if (item === drag.springNav) return;
   clearSpring();
   if (!item || item.classList.contains('on')) return;
@@ -207,6 +208,11 @@ function springLoad() {
 function clearSpring() { clearTimeout(drag.springTimer); drag.springNav?.classList.remove('spring'); drag.springNav = null; }
 function step() {
   if (!drag.on) return;
+  if (drag.moved && !drag.returning) { // one hit-test per frame, shared by both checks
+    drag.moved = false;
+    const stack = document.elementsFromPoint(drag.px, drag.py);
+    findTarget(stack); springLoad(stack);
+  }
   // aim at the pointer; near a target, the target's gravity pulls the icon in
   let tx = drag.returning ? drag.home.x : drag.px, ty = drag.returning ? drag.home.y : drag.py;
   if (drag.target && !drag.returning && drag.target.isConnected) { const c = center(drag.target.querySelector('img, .ph')); tx += (c.x - tx) * 0.45; ty += (c.y - ty) * 0.45; }
@@ -665,8 +671,8 @@ addEventListener('resize', movePill);
 function showWelcome() {
   const pair = PREFS.favourites.map(byId).filter((a) => a?.icon).slice(0, 2);
   const [a, b] = pair.length === 2 ? pair : APPS.filter((x) => x.icon).slice(0, 2);
-  if (a) $('.demo-a').src = a.icon; if (b) $('.demo-b').src = b.icon;
-  if (a && b) { $('.dg.a').style.background = vivid(a.color); $('.dg.b').style.background = vivid(b.color); }
+  if (a) $('.demo-a').src = a.icon; if (b) $('.demo-b').src = b.icon; // the two apps that melt together
+  if (a && b) { $('.dg.a').style.background = vivid(a.color); $('.dg.b').style.background = `linear-gradient(90deg, ${vivid(a.color)}, ${vivid(b.color)})`; } // the merged drop shows both colours
   $('#welcome').hidden = false;
   $('#welcomeGo').onclick = async () => {
     savePrefs({ onboarded: true });
