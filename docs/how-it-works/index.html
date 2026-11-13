@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Fuseduo works · Fuseduo</title>
+<meta name="description" content="Drag one Mac app onto another, pick one of three ideas, read the plan and approve it. How Fuseduo turns two apps into a real AppleScript, JavaScript or zsh automation.">
+<link rel="canonical" href="https://fuseduo.com/how-it-works/">
+<meta name="theme-color" content="#7a63ff">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Fuseduo by Hollowbit Studio">
+<meta property="og:url" content="https://fuseduo.com/how-it-works/">
+<meta property="og:title" content="How Fuseduo works · Fuseduo">
+<meta property="og:description" content="Drag one Mac app onto another, pick one of three ideas, read the plan and approve it. How Fuseduo turns two apps into a real AppleScript, JavaScript or zsh automation.">
+<meta property="og:image" content="https://fuseduo.com/assets/img/og.png?v=313fbfeb">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Fuseduo: drop one Mac app onto another, get an automation.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@hollowbitstudio">
+<meta name="twitter:title" content="How Fuseduo works · Fuseduo">
+<meta name="twitter:description" content="Drag one Mac app onto another, pick one of three ideas, read the plan and approve it. How Fuseduo turns two apps into a real AppleScript, JavaScript or zsh automation.">
+<meta name="twitter:image" content="https://fuseduo.com/assets/img/og.png?v=313fbfeb">
+<link rel="icon" href="/assets/img/icon-64.png" type="image/png">
+<link rel="apple-touch-icon" href="/assets/img/icon-256.png">
+<link rel="preload" href="/assets/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/fd.css?v=faef873d">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Fuseduo","operatingSystem":"macOS","applicationCategory":"UtilitiesApplication","softwareVersion":"1.0.0","downloadUrl":"https://github.com/hollowbit-dev/fuseduo/releases/latest/download/Fuseduo-1.0.0-mac-arm64.dmg","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Drop one Mac app onto another and get an automation, written as a real script that you read and approve before it runs.","url":"https://fuseduo.com/","publisher":{"@type":"Organization","name":"Hollowbit Studio","url":"https://fuseduo.com/"}}</script>
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+<div class="wash" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="dots" aria-hidden="true"></div><div class="dots-lit" aria-hidden="true"></div><div class="grain" aria-hidden="true"></div>
+
+<header class="nav"><div class="nav-in glass">
+  <a class="logo" href="/"><img src="/assets/img/icon-64.png" alt="" width="30" height="30">Fuseduo <small>by Hollowbit</small></a>
+  <nav class="links" aria-label="Fuseduo"><a href="/how-it-works/" aria-current="page">How it works</a><a href="/safety/">Safety</a><a href="/support/">Support</a><a class="btn btn-brand sm" href="/#download">Download</a></nav>
+  <button class="menu-btn" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 8h16M4 16h16"/></svg></button>
+</div></header>
+<main>
+<section class="page-head"><div class="wrap narrow">
+  <p class="eyebrow"><span class="pip"></span>How it works</p>
+  <h1 class="words" style="font-size:clamp(40px,6vw,72px)"><span class="w" style="--i:0">From</span> <span class="w" style="--i:1">two</span> <span class="w" style="--i:2">icons</span> <span class="w" style="--i:3">to</span> <span class="w" style="--i:4">a</span> <span class="w" style="--i:5">working</span> <span class="w" style="--i:6">automation.</span></h1>
+  <p class="lede" data-reveal style="--d:.4s">Four steps, about half a minute, and you stay in charge of every one.</p>
+</div></section>
+
+<section class="section tight"><div class="wrap steps">
+  <div class="step"><div class="step-text" data-reveal><div class="step-num">1</div><h2>Drag one app onto another.</h2><p>Your apps sit on a glass board, grouped into Favourites, Recent and categories. Pick one up and drop it on another. They melt together.</p><ul><li>Every app installed on your Mac, found automatically</li><li>Star the ones you use most</li><li>Hover a shelf in the sidebar while dragging to switch to it</li></ul></div>
+    <div class="frame crop" data-reveal style="--d:.1s;--pos:0 0"><img src="/assets/img/app-drag.webp" alt="Dragging the Music icon onto Notes on the Fuseduo board." width="1600" height="1000" loading="lazy" decoding="async"></div></div>
+  <div class="step"><div class="step-text" data-reveal><div class="step-num">2</div><h2>Pick one of three ideas.</h2><p>Claude looks at what the two apps can actually do and suggests three automations, from delightful to practical. Or type exactly what you want.</p><ul><li>Ideas often start loading while you’re still hovering</li><li>Ideas for a pair you’ve fused before come back instantly</li><li>Not quite right? Ask for three more</li></ul></div>
+    <div class="frame crop" data-reveal style="--d:.1s;--pos:100% 0"><img src="/assets/img/app-ideas.webp" alt="Three fusion ideas for Music and Notes." width="1600" height="1000" loading="lazy" decoding="async"></div></div>
+  <div class="step"><div class="step-text" data-reveal><div class="step-num">3</div><h2>Read the plan.</h2><p>Fuseduo writes the automation as a real script, checks that it compiles, fixes it once if it doesn’t, and explains it step by step.</p>
+<pre class="code"><span class="c">-- Today’s agenda note: Calendar + Notes</span>
+<span class="k">tell</span> application <span class="s">"Calendar"</span>
+  <span class="k">set</span> todays <span class="k">to</span> events <span class="k">whose</span> start date ≥ dayStart
+<span class="k">end tell</span>
+<span class="k">tell</span> application <span class="s">"Notes"</span> <span class="k">to</span> make new note …</pre></div>
+    <div class="frame crop" data-reveal style="--d:.1s;--pos:100% 0"><img src="/assets/img/app-plan.webp" alt="A fusion plan with steps, a risk rating and the script." width="1600" height="1000" loading="lazy" decoding="async"></div></div>
+  <div class="step"><div class="step-text" data-reveal><div class="step-num">4</div><h2>Run it, then keep it.</h2><p>Press Approve and run. Save the fusions you like and they wait on your shelf, showing when each one last ran and whether it worked. Run them again in one click.</p></div>
+    <div class="frame crop" data-reveal style="--d:.1s;--pos:0 100%"><img src="/assets/img/app-board.webp" alt="The Fuseduo board with saved fusions on the shelf." width="1600" height="1000" loading="lazy" decoding="async"></div></div>
+</div></section>
+
+<section class="section"><div class="wrap">
+  <div class="section-head" data-reveal><p class="eyebrow"><span class="pip"></span>Under the hood</p><h2>Real scripts, not a black box.</h2></div>
+  <div class="grid3">
+    <div class="card" data-reveal style="--d:0s"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01"/></svg></div><h3>AppleScript</h3><p>For apps with a scripting dictionary, like Notes, Calendar, Mail, Music, Reminders and Safari.</p></div>
+    <div class="card" data-reveal style="--d:0.08s"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2.5 4.5 13.5H12l-1 8 8.5-11H12l1-8Z"/></svg></div><h3>JavaScript for Automation</h3><p>The same app control as AppleScript, written in JavaScript, when that fits better.</p></div>
+    <div class="card" data-reveal style="--d:0.16s"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v10H4zM9 19.5h6M12 15.5v4"/></svg></div><h3>zsh</h3><p>For files and command-line tools. New files only go to a Fusions folder on your Desktop.</p></div>
+  </div>
+  <div class="grid2" style="margin-top:16px">
+    <div class="card" data-reveal><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7a3 3 0 1 1-3 3m3-3a3 3 0 0 0-3 3m3-3h.01M12 10 4 18v2h3v-2h2v-2h2l1.5-1.5"/></svg></div><h3>Which Claude it uses</h3><p>With Claude Code installed and signed in, Fuseduo runs on your existing Claude plan. Or add an Anthropic API key in Settings; it’s stored with your Mac’s keychain.</p></div>
+    <div class="card" data-reveal style="--d:.08s"><div class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15a8 8 0 1 1 16 0M12 15l4-5M4 19.5h16"/></svg></div><h3>Best or Fast</h3><p>Choose the model in Settings.</p><div class="models"><div class="model"><b>Best</b><span>Claude Opus 5.5. The most careful.</span></div><div class="model"><b>Fast</b><span>Claude Sonnet 5.5. About three times quicker.</span></div></div></div>
+  </div>
+</div></section>
+<section class="section" id="download"><div class="wrap narrow"><div class="band" data-reveal>
+  <img class="big-icon" src="/assets/img/icon-256.png" alt="" width="108" height="108">
+  <h2>Get Fuseduo.</h2>
+  <p class="lede">Free for Mac. Drop one app on another and see what they can do together.</p>
+  <div class="dl-row"><a class="btn btn-brand big" href="https://github.com/hollowbit-dev/fuseduo/releases/latest/download/Fuseduo-1.0.0-mac-arm64.dmg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19.5h14"/></svg>Download for Mac</a><a class="btn btn-glass big" href="https://github.com/hollowbit-dev/fuseduo/releases/latest/download/Fuseduo-1.0.0-mac-x64.dmg">Intel Mac</a></div>
+  <p class="dl-sub">Version 1.0.0 · Free and open source · <a href="https://github.com/hollowbit-dev/fuseduo">View on GitHub</a> · <a href="https://github.com/hollowbit-dev/fuseduo/releases/latest">All downloads</a></p>
+  <p class="first-run"><b>First launch:</b> right-click Fuseduo in Applications and choose <b>Open</b> (it isn’t signed with a paid Apple certificate). You’ll need <a href="https://claude.com/code">Claude Code</a> or an Anthropic API key.</p>
+  <div class="socials"><a href="https://x.com/hollowbitstudio" aria-label="X" title="X" rel="me noopener"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M17.8 3h3.1l-6.8 7.7L22 21h-6.2l-4.9-6.3L5.3 21H2.2l7.2-8.3L1.8 3h6.4l4.4 5.8L17.8 3Zm-1.1 16.2h1.7L7.4 4.7H5.6l11.1 14.5Z"/></svg></a><a href="https://www.youtube.com/@hollowbitstudio" aria-label="YouTube" title="YouTube" rel="me noopener"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8ZM9.7 15.1V8.9l5.8 3.1-5.8 3.1Z"/></svg></a><a href="https://www.tiktok.com/@hollowbitstudio" aria-label="TikTok" title="TikTok" rel="me noopener"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M16.6 2h-3.4v13.4a2.9 2.9 0 1 1-2-2.8V9.1a6.3 6.3 0 1 0 5.4 6.3V8.6a8 8 0 0 0 4.6 1.5V6.7a4.6 4.6 0 0 1-4.6-4.7Z"/></svg></a><a href="https://www.instagram.com/hollowbitstudio" aria-label="Instagram" title="Instagram" rel="me noopener"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 2.2c3.2 0 3.6 0 4.8.1 3.3.1 4.8 1.7 4.9 4.9.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 3.2-1.7 4.8-4.9 4.9-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-3.3-.1-4.8-1.7-4.9-4.9C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8C2.4 3.9 3.9 2.4 7.2 2.3 8.4 2.2 8.8 2.2 12 2.2Zm0 4.7a5.1 5.1 0 1 0 0 10.2 5.1 5.1 0 0 0 0-10.2Zm0 8.4a3.3 3.3 0 1 1 0-6.6 3.3 3.3 0 0 1 0 6.6Zm5.3-9.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z"/></svg></a><a href="https://www.reddit.com/user/hollowbitstudio" aria-label="Reddit" title="Reddit" rel="me noopener"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M22 12.1a2.2 2.2 0 0 0-3.7-1.6 10.8 10.8 0 0 0-5.8-1.8l1-4.6 3.2.7a1.6 1.6 0 1 0 .2-1l-3.6-.8a.5.5 0 0 0-.6.4l-1.1 5.3a10.8 10.8 0 0 0-5.9 1.8A2.2 2.2 0 1 0 3.3 14a4.3 4.3 0 0 0 0 .7c0 3.4 3.9 6.1 8.7 6.1s8.7-2.7 8.7-6.1a4.3 4.3 0 0 0 0-.7 2.2 2.2 0 0 0 1.3-1.9ZM7 13.7a1.6 1.6 0 1 1 1.6 1.6A1.6 1.6 0 0 1 7 13.7Zm9 4.2a5.8 5.8 0 0 1-4 1.2 5.8 5.8 0 0 1-4-1.2.4.4 0 0 1 .6-.6 5 5 0 0 0 3.4 1 5 5 0 0 0 3.4-1 .4.4 0 1 1 .6.6Zm-.4-2.6a1.6 1.6 0 1 1 1.6-1.6 1.6 1.6 0 0 1-1.6 1.6Z"/></svg></a></div>
+</div></div></section>
+</main>
+<footer class="foot"><div class="wrap">
+  <div class="foot-in">
+    <div>
+      <a class="logo" href="/"><img src="/assets/img/icon-64.png" alt="" width="30" height="30">Fuseduo</a>
+      <p>Drop one Mac app onto another. Get an automation. Free and open source. A project by <a href="https://hollowbit.dev/">Hollowbit Studio</a>.</p>
+    </div>
+    <nav aria-label="Footer">
+      <div><b>Fuseduo</b><a href="/">Overview</a><a href="/how-it-works/">How it works</a><a href="/safety/">Safety</a><a href="/support/">Support</a><a href="/#download">Download</a><a href="https://github.com/hollowbit-dev/fuseduo">GitHub</a></div>
+      <div><b>Hollowbit Studio</b><a href="https://hollowbit.dev/">Home</a><a href="https://hollowbit.dev/about/">About</a><a href="https://hollowbit.dev/contact/">Contact</a><a href="https://hollowbit.dev/privacy/">Privacy</a></div>
+    </nav>
+  </div>
+  <p class="copy">© 2026 Hollowbit Studio. Fuseduo is an independent project and isn’t affiliated with Apple or Anthropic. App names and icons belong to their owners.</p>
+</div></footer>
+
+<script src="/assets/fd.js?v=32414aff" defer></script>
+<script src="/assets/fx.js?v=644adea9" defer></script>
+</body>
+</html>
