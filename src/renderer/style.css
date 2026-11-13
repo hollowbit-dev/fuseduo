@@ -444,3 +444,18 @@ body.panel-open .board-wrap, body.panel-open .shelf { padding-right: calc(min(48
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* ---------- shared fusions ---------- */
+.panel-share { position: absolute; top: 14px; right: 54px; z-index: 3; height: 32px; padding: 0 12px; gap: 6px; display: inline-flex; align-items: center; }
+.panel-share svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.shelf-head .grow { flex: 1; }
+.shelf-head .link { font-size: 12px; }
+.shared { padding: 13px 15px; border-radius: 16px; font-size: 12.5px; line-height: 1.5; display: grid; gap: 4px; animation: rise .5s var(--spring) both; }
+.shared b { font-size: 13px; }
+.shared.ok { background: rgba(122,139,255,.10); box-shadow: inset 0 0 0 1px rgba(122,139,255,.32); }
+.shared.warn { color: var(--med); background: rgba(251,191,74,.1); box-shadow: inset 0 0 0 1px rgba(251,191,74,.35); }
+.shared.bad { color: var(--high); background: rgba(255,107,99,.1); box-shadow: inset 0 0 0 1px rgba(255,107,99,.45); }
+.shared .why { color: var(--text-2); }
+.dropzone { position: fixed; inset: 12px; z-index: 60; border-radius: 22px; border: 2px dashed rgba(122,139,255,.7); background: rgba(12,11,18,.82); display: grid; place-items: center; pointer-events: none; }
+.dropzone div { display: grid; gap: 6px; text-align: center; }
+.dropzone b { font-size: 18px; } .dropzone span { color: var(--text-2); font-size: 13px; }

@@ -385,6 +385,7 @@ function openPanel(a, b, title) {
   $('#pPair').textContent = `${a.name} + ${b.name}`;
   setTitle(title);
   foot(null);
+  $('#panelShare').hidden = true;
   p.hidden = false; document.body.classList.add('panel-open');
 }
 async function closePanel() {
@@ -560,7 +561,9 @@ async function showPlan() {
   refine.onsubmit = (e) => { e.preventDefault(); const t = ri.value.trim(); if (t) refineFusion(t); };
 
   const out = el('div', 'result'); out.hidden = true;
-  body().replaceChildren(what, safety, code, refine, out);
+  body().replaceChildren(...(current.shared ? [sharedBanner(current.shared)] : []), what, safety, code, refine, out);
+  const shareBtn = $('#panelShare'); shareBtn.hidden = false;
+  shareBtn.onclick = () => shareFusion(current);
 
   const verdict = await window.fuse.check({ language: plan.language, script: plan.script });
   const run = el('button', 'btn btn-primary'); run.append(svgEl(ICON.play), 'Approve and run');
@@ -640,6 +643,59 @@ async function refineFusion(instruction) {
   showPlan();
   toast('Updated. Read the new steps before you run it.');
 }
+// ---------- shared fusions ----------
+async function shareFusion(cur) {
+  const r = await window.fuse.exportFusion({ a: pick(cur.a), b: pick(cur.b), idea: cur.idea, plan: cur.plan });
+  if (!r.ok) return toast(r.error, false);
+  if (r.data) toast('Saved. Send the .fuseduo file to anyone with Fuseduo.');
+}
+// What the person sees above a shared fusion's plan. The steps under it are Claude's own reading of the script.
+function sharedBanner(sh) {
+  const box = (cls, title, ...lines) => { const d = el('div', `shared ${cls}`); d.append(el('b', '', title)); lines.filter(Boolean).forEach((t) => d.append(el('span', 'why', t))); return d; };
+  const missing = sh.missing.length ? `You don’t have ${sh.missing.join(' or ')} on this Mac, so it may not work.` : '';
+  if (sh.auditError) return box('warn', 'Shared fusion. Claude couldn’t check it.', `(${sh.auditError}) The steps below are the sender’s own words, so open “The script” and read it before you run anything.`, missing);
+  if (!sh.audit.matches) return box('bad', 'Careful: this doesn’t do what the sender says.', sh.audit.concerns || 'Claude found things the sender’s description leaves out.', 'The steps below are what the script really does.', missing);
+  return box('ok', 'Shared fusion, checked by Claude.', 'Someone else made this. Claude read the script itself and wrote the steps below, and they match what the sender described. Nothing runs until you approve.', missing);
+}
+async function openShared(file) {
+  const r = await window.fuse.openFusion(file);
+  if (!r.ok) return toast(r.error, false);
+  if (!r.data) return; // dialog cancelled
+  const { a, b, idea, plan } = r.data;
+  const local = (x) => byId(x.id) || { ...x, color: '#8a87a0', icon: '', scriptable: undefined };
+  const A = local(a), B = local(b);
+  const mine = current = { a: A, b: B, idea, plan, fusionId: `f${Date.now()}`, dirty: true, shared: { missing: [a, b].filter((x) => !byId(x.id)).map((x) => x.name) } };
+  openPanel(A, B, plan.name);
+  setStep('review');
+  body().replaceChildren(el('div', 'ghostcard tall'), el('div', 'ghostcard'));
+  busy(true, 'Claude is reading the script for you…');
+  const au = await window.fuse.auditFusion(pick(A), pick(B), plan);
+  if (current !== mine) return;
+  busy(false);
+  if (au.ok) {
+    current.shared.audit = au.data;
+    current.plan = { ...plan, steps: au.data.steps, risk: au.data.risk, permissions: au.data.permissions, undo: au.data.undo };
+  } else current.shared.auditError = au.error;
+  showPlan();
+}
+$('#importBtn').onclick = () => openShared();
+window.fuse.onIncoming((file) => openShared(file));
+// Dropping a .fuseduo file anywhere on the window opens it.
+{
+  let depth = 0;
+  const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+  addEventListener('dragenter', (e) => { if (!hasFiles(e)) return; depth++; $('#dropzone').hidden = false; });
+  addEventListener('dragleave', (e) => { if (!hasFiles(e)) return; if (--depth <= 0) { depth = 0; $('#dropzone').hidden = true; } });
+  addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
+  addEventListener('drop', (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault(); depth = 0; $('#dropzone').hidden = true;
+    const f = [...e.dataTransfer.files].find((x) => /\.fuseduo$/i.test(x.name));
+    if (!f) return toast('Only .fuseduo files can be dropped here.', false);
+    openShared(window.fuse.pathFor(f));
+  });
+}
+
 // The new app's icon: the two apps' icons, overlapping, 1024 px.
 function fusedIcon(a, b) {
   return new Promise((resolve) => {
@@ -809,7 +865,10 @@ function showWelcome() {
 async function closeWelcome() {
   savePrefs({ onboarded: true });
   const w = $('#welcome'); w.classList.add('leaving'); await wait(440); w.hidden = true; w.classList.remove('leaving');
+  openPending();
 }
+// Files double-clicked in Finder before the window was ready (shown after first-launch setup).
+async function openPending() { const r = await window.fuse.pendingFusions(); if (r.ok && r.data.length) openShared(r.data.at(-1)); }
 // Step 2: ask macOS for what fusions need, up front and explained, instead of pop-ups mid-run.
 function showPermissions() {
   $('#welcome').hidden = false; $('#welcomeIntro').hidden = true; $('#permStep').hidden = false;
@@ -861,7 +920,7 @@ let LOADING = true;
   setView(PREFS.view, { quiet: true });
   FUSIONS = fusions.ok ? fusions.data : [];
   renderShelf();
-  if (!PREFS.onboarded) showWelcome();
+  if (!PREFS.onboarded) showWelcome(); else openPending();
   // a newer release on GitHub? say so once, quietly
   const [u, v] = await Promise.all([window.fuse.checkUpdate(), window.fuse.version()]);
   const newer = (x, y) => { const p = (s) => String(s).split('.').map(Number); const [a, b] = [p(x), p(y)]; for (let i = 0; i < 3; i++) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0); return false; };

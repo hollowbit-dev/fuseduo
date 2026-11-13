@@ -1,13 +1,14 @@
 // Fuseduo: main process.
 // Lists the real apps on this Mac, asks Claude for automation ideas when two apps are fused,
 // builds the chosen one as a script, and runs it only after the user approves it.
-const { app, BrowserWindow, ipcMain, safeStorage, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, safeStorage, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execFile, execFileSync, spawn } = require('child_process');
 const Anthropic = require('@anthropic-ai/sdk').default;
 const { listApps } = require('./apps');
-const { ideasPrompt, buildPrompt, fixPrompt, refinePrompt, IDEAS_SCHEMA, BUILD_SCHEMA } = require('./prompts');
+const { ideasPrompt, buildPrompt, fixPrompt, refinePrompt, auditPrompt, IDEAS_SCHEMA, BUILD_SCHEMA, AUDIT_SCHEMA } = require('./prompts');
+const share = require('./share');
 const os = require('os');
 const { checkScript } = require('./guard');
 
@@ -313,6 +314,54 @@ handle('update:check', async () => {
   } catch { return null; }
 });
 handle('app:version', () => app.getVersion());
+
+// ---------- shared fusions (.fuseduo files) ----------
+// Export writes plain data only. Import never runs anything: it checks the file, runs the safety guard and a
+// compile check, and the renderer then has Claude read the script before showing the plan for approval.
+const SHARE_DIR = process.env.FUSE_SHARE_DIR; // tests only: skip the save/open dialogs
+handle('fusion:export', async (f) => {
+  const verdict = checkScript(f.plan.language, f.plan.script);
+  if (!verdict.ok) throw new Error(`This fusion can’t be shared: ${verdict.reason}.`);
+  const name = share.fileName(f.plan.name);
+  let out = SHARE_DIR ? path.join(SHARE_DIR, name) : null;
+  if (!out) {
+    const r = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), { title: 'Share fusion', defaultPath: path.join(app.getPath('desktop'), name), filters: [{ name: 'Fuseduo fusion', extensions: ['fuseduo'] }] });
+    if (r.canceled || !r.filePath) return null;
+    out = r.filePath;
+  }
+  fs.writeFileSync(out, JSON.stringify(share.pack(f, app.getVersion()), null, 2));
+  if (!SHARE_DIR) shell.showItemInFolder(out);
+  return out;
+});
+handle('fusion:open', async (file) => {
+  if (!file) {
+    const r = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), { title: 'Open a shared fusion', defaultPath: SHARE_DIR, properties: ['openFile'], filters: [{ name: 'Fuseduo fusion', extensions: ['fuseduo'] }] });
+    if (r.canceled || !r.filePaths[0]) return null;
+    file = r.filePaths[0];
+  }
+  if (!/\.fuseduo$/i.test(file)) throw new Error('Only .fuseduo files can be opened.');
+  const st = fs.statSync(file);
+  if (st.size > share.MAX_BYTES) throw new Error('That file is too big to be a Fuseduo fusion.');
+  const f = share.unpack(fs.readFileSync(file, 'utf8'));
+  const verdict = checkScript(f.plan.language, f.plan.script);
+  if (!verdict.ok) throw new Error(`Fuseduo won’t open this shared fusion: ${verdict.reason}.`);
+  f.plan.compileError = await compileCheck(f.plan);
+  return f;
+});
+handle('fusion:audit', async (a, b, plan) => {
+  const r = MOCK ? await MOCK.audit(a, b, plan) : await ask(...auditPrompt(a, b, plan), AUDIT_SCHEMA, 'medium', FIX_MODEL);
+  return { ...r, risk: share.higherRisk(r.risk, plan.risk) };
+});
+// Double-clicking a .fuseduo file (or dropping it on the Dock icon) opens it here.
+const pendingFiles = [];
+app.on('open-file', (e, file) => {
+  e.preventDefault();
+  const win = BrowserWindow.getAllWindows()[0];
+  if (win && !win.webContents.isLoading() && rendererReady) win.webContents.send('fusion:incoming', file);
+  else pendingFiles.push(file);
+});
+let rendererReady = false;
+handle('fusion:pending', () => { rendererReady = true; return pendingFiles.splice(0); });
 handle('open:url', (url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return true; });
 
 // ---------- window ----------

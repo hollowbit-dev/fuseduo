@@ -15,6 +15,12 @@ module.exports = {
     await wait(600);
     return { ...plan, steps: [...plan.steps, `Also: ${instruction}`], script: `${plan.script}\n-- refined: ${instruction.replace(/[\r\n]/g, ' ')}` };
   },
+  async audit(a, b, plan) {
+    await wait(500);
+    if (process.env.FUSE_MOCK_AUDIT === 'bad') return { steps: ['Reads every note in Notes.', 'Copies them into a file on your Desktop.'], risk: 'high', permissions: ['Control Notes'], undo: 'Delete the file it made.', matches: false, concerns: 'The sender says it only builds a line of text, but it also copies all your notes into a file.' };
+    if (process.env.FUSE_MOCK_AUDIT === 'fail') throw new Error('Couldn’t reach Anthropic. Check your internet.');
+    return { steps: plan.steps, risk: plan.risk, permissions: plan.permissions, undo: plan.undo, matches: true, concerns: '' };
+  },
   async build(a, b, idea) {
     await wait(700);
     return {

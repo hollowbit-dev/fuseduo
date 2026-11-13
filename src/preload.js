@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 const call = (ch) => (...args) => ipcRenderer.invoke(ch, ...args);
 contextBridge.exposeInMainWorld('fuse', {
@@ -27,6 +27,12 @@ contextBridge.exposeInMainWorld('fuse', {
   openUrl: call('open:url'),
   checkUpdate: call('update:check'),
   version: call('app:version'),
+  exportFusion: call('fusion:export'),
+  openFusion: call('fusion:open'),
+  auditFusion: call('fusion:audit'),
+  pendingFusions: call('fusion:pending'),
+  onIncoming: (fn) => ipcRenderer.on('fusion:incoming', (_e, p) => fn(p)),
+  pathFor: (file) => { try { return webUtils.getPathForFile(file); } catch { return ''; } },
   prefs: call('prefs:get'),
   setPrefs: call('prefs:set'),
 });
