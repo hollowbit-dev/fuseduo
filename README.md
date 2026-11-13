@@ -15,8 +15,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hollowbit-dev/fuseduo/releases/latest/download/Fuseduo-1.0.0-mac-arm64.dmg"><img src="https://img.shields.io/badge/Download_for_Mac-Apple_Silicon-7a63ff?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac (Apple Silicon)"></a>
-  <a href="https://github.com/hollowbit-dev/fuseduo/releases/latest/download/Fuseduo-1.0.0-mac-x64.dmg"><img src="https://img.shields.io/badge/Intel_Mac-x64-3b3650?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Intel Mac"></a>
+  <a href="https://github.com/hollowbit-dev/fuseduo/releases/latest/download/Fuseduo-1.1.0-mac-arm64.dmg"><img src="https://img.shields.io/badge/Download_for_Mac-Apple_Silicon-7a63ff?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac (Apple Silicon)"></a>
+  <a href="https://github.com/hollowbit-dev/fuseduo/releases/latest/download/Fuseduo-1.1.0-mac-x64.dmg"><img src="https://img.shields.io/badge/Intel_Mac-x64-3b3650?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Intel Mac"></a>
 </p>
 
 <p align="center"><sub>
