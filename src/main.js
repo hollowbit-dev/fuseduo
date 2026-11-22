@@ -393,7 +393,7 @@ function createWindow() {
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 }
-app.whenReady().then(() => { migrateOldData(); createWindow(); });
+app.whenReady().then(() => { require('./discord-menu').addDiscordMenu(); migrateOldData(); createWindow(); });
 app.on('window-all-closed', () => app.quit());
 
 module.exports = { runScript };

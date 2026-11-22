@@ -1,0 +1,23 @@
+name: Post release to Discord
+on:
+  release:
+    types: [published]
+jobs:
+  discord:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to #releases
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_RELEASES_WEBHOOK }}
+          REPO: ${{ github.event.repository.name }}
+          TAG: ${{ github.event.release.tag_name }}
+          BODY: ${{ github.event.release.body }}
+          URL: ${{ github.event.release.html_url }}
+          PRE: ${{ github.event.release.prerelease }}
+        run: |
+          [ -z "$WEBHOOK" ] && { echo "No webhook secret, skipping"; exit 0; }
+          APP="$(echo "${REPO:0:1}" | tr a-z A-Z)${REPO:1}"
+          PING=""; [ "$PRE" != "true" ] && PING="<@&1574086861419192462> "
+          jq -n --arg c "${PING}**$APP $TAG** is out" --arg t "$APP $TAG" --arg u "$URL" --arg d "${BODY:0:3800}" --arg role "1574086861419192462" \
+            '{content:$c, allowed_mentions:{roles:[$role]}, embeds:[{title:$t, url:$u, description:(if $d=="" then "See what changed on GitHub." else $d end), color:9141494}]}' \
+            | curl -sSf -H 'Content-Type: application/json' -d @- "$WEBHOOK"
