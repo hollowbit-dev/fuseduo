@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://hollowbit.dev/fuseduo/"><img src=".github/fuseduo-demo.webp" width="880" alt="Fuseduo: the Music icon is dragged onto Notes, they melt into one drop, three ideas appear, and the chosen one becomes a plan with steps and an Approve and run button."></a>
+  <a href="https://fuseduo.com/"><img src=".github/fuseduo-demo.webp" width="880" alt="Fuseduo: the Music icon is dragged onto Notes, they melt into one drop, three ideas appear, and the chosen one becomes a plan with steps and an Approve and run button."></a>
 </p>
 
 <h1 align="center"><img src="assets/icon.png" width="44" align="top" alt=""> Fuseduo</h1>
@@ -15,12 +15,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hollowbit-dev/fuseduo/releases/latest/download/Fuseduo-1.1.0-mac-arm64.dmg"><img src="https://img.shields.io/badge/Download_for_Mac-Apple_Silicon-7a63ff?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac (Apple Silicon)"></a>
-  <a href="https://github.com/hollowbit-dev/fuseduo/releases/latest/download/Fuseduo-1.1.0-mac-x64.dmg"><img src="https://img.shields.io/badge/Intel_Mac-x64-3b3650?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Intel Mac"></a>
+  <a href="https://github.com/hollowbit-dev/fuseduo/releases/latest"><img src="https://img.shields.io/badge/Download_for_Mac-Apple_Silicon-7a63ff?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac (Apple Silicon)"></a>
+  <a href="https://github.com/hollowbit-dev/fuseduo/releases/latest"><img src="https://img.shields.io/badge/Intel_Mac-x64-3b3650?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Intel Mac"></a>
 </p>
 
 <p align="center"><sub>
-  <a href="https://hollowbit.dev/fuseduo/">Website</a> · ▶ <a href="https://hollowbit.dev/fuseduo/">Watch the 20-second film</a> · Homebrew: <code>brew tap hollowbit-dev/tap &amp;&amp; brew trust hollowbit-dev/tap &amp;&amp; brew install --cask fuseduo</code>
+  <a href="https://fuseduo.com/">Website</a> · ▶ <a href="https://fuseduo.com/">Watch the 20-second film</a> · Homebrew: <code>brew tap hollowbit-dev/tap &amp;&amp; brew trust hollowbit-dev/tap &amp;&amp; brew install --cask fuseduo</code>
 </sub></p>
 
 Fuseduo is a board of every app on your Mac. Drag one app onto another and it suggests three things
@@ -77,7 +77,21 @@ npm start
 | `scripts/ui-test.cjs`, `scripts/refine-test.cjs` | Mock-mode UI tests (Playwright) |
 | `src/renderer/` | The board, drag physics, fusion animation and panel |
 
-MIT licence. © 2026 Hollowbit Studio.
+## More free apps from Hollowbit
+
+- **[Melodyshaper](https://hollowbit.dev/melodyshaper/)**: hum a tune, make a song
+- **[Clipshaper](https://hollowbit.dev/clipshaper/)**: long videos to short clips
+- **[Captionshaper](https://hollowbit.dev/captionshaper/)**: offline auto subtitles
+- **[Lightshaper](https://hollowbit.dev/lightshaper/)**: free photo editor
+- **[Fileshaper](https://hollowbit.dev/fileshaper/)**: compress, convert, sign PDFs
+- **[Writeshaper](https://hollowbit.dev/writeshaper/)**: offline writing assistant
+- **[Moveshaper](https://hollowbit.dev/moveshaper/)**: move to a new computer
+- **[Diskshaper](https://hollowbit.dev/diskshaper/)**: clean up storage
+- **[Startshaper](https://hollowbit.dev/startshaper/)**: find out why your PC is slow
+
+## Licence
+
+MIT. © 2026 Hollowbit Studio.
 
 ---
 
